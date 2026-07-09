@@ -14,7 +14,8 @@
 
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 
-<form class="entry-form" method="post" enctype="multipart/form-data">
+<form class="entry-form" method="post" enctype="multipart/form-data"
+      action="{% if mode == 'edit' %}{{ url_for('edit_entry', entry_id=entry_id) }}{% else %}{{ url_for('new_entry') }}{% endif %}">
   {% if form.image_filename %}
     <input type="hidden" name="existing_image_filename" value="{{ form.image_filename }}">
   {% endif %}

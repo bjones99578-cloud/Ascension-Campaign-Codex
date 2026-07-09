@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+wiki.db
+static/uploads/
+venv/
+.env
