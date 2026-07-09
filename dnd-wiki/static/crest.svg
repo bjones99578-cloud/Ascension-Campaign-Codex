@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Ascension Campaign Codex crest">
+  <defs>
+    <radialGradient id="crestBg" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#232931" />
+      <stop offset="100%" stop-color="#14171b" />
+    </radialGradient>
+    <linearGradient id="accentStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8ec0e8" />
+      <stop offset="50%" stop-color="#5b9bd5" />
+      <stop offset="100%" stop-color="#2f5f8f" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="100" cy="100" r="96" fill="url(#crestBg)" stroke="url(#accentStroke)" stroke-width="2" />
+  <circle cx="100" cy="100" r="90" fill="none" stroke="url(#accentStroke)" stroke-width="2.5" />
+  <circle cx="100" cy="100" r="82" fill="none" stroke="url(#accentStroke)" stroke-width="1" opacity="0.85" />
+
+  <!-- compass ticks -->
+  <g stroke="url(#accentStroke)" stroke-width="1.4" stroke-linecap="round">
+    <line x1="100.0" y1="18.0" x2="100.0" y2="10.0" />
+    <line x1="121.2" y1="20.8" x2="123.3" y2="13.1" />
+    <line x1="141.0" y1="29.0" x2="145.0" y2="22.1" />
+    <line x1="158.0" y1="42.0" x2="163.6" y2="36.4" />
+    <line x1="171.0" y1="59.0" x2="177.9" y2="55.0" />
+    <line x1="179.2" y1="78.8" x2="186.9" y2="76.7" />
+    <line x1="182.0" y1="100.0" x2="190.0" y2="100.0" />
+    <line x1="179.2" y1="121.2" x2="186.9" y2="123.3" />
+    <line x1="171.0" y1="141.0" x2="177.9" y2="145.0" />
+    <line x1="158.0" y1="158.0" x2="163.6" y2="163.6" />
+    <line x1="141.0" y1="171.0" x2="145.0" y2="177.9" />
+    <line x1="121.2" y1="179.2" x2="123.3" y2="186.9" />
+    <line x1="100.0" y1="182.0" x2="100.0" y2="190.0" />
+    <line x1="78.8" y1="179.2" x2="76.7" y2="186.9" />
+    <line x1="59.0" y1="171.0" x2="55.0" y2="177.9" />
+    <line x1="42.0" y1="158.0" x2="36.4" y2="163.6" />
+    <line x1="29.0" y1="141.0" x2="22.1" y2="145.0" />
+    <line x1="20.8" y1="121.2" x2="13.1" y2="123.3" />
+    <line x1="18.0" y1="100.0" x2="10.0" y2="100.0" />
+    <line x1="20.8" y1="78.8" x2="13.1" y2="76.7" />
+    <line x1="29.0" y1="59.0" x2="22.1" y2="55.0" />
+    <line x1="42.0" y1="42.0" x2="36.4" y2="36.4" />
+    <line x1="59.0" y1="29.0" x2="55.0" y2="22.1" />
+    <line x1="78.8" y1="20.8" x2="76.7" y2="13.1" />
+  </g>
+
+  <!-- laurel-ish flourishes flanking the book -->
+  <g fill="none" stroke="url(#accentStroke)" stroke-width="1.6" stroke-linecap="round" opacity="0.9">
+    <path d="M 58 138 Q 46 122 52 104 Q 56 90 50 76" />
+    <path d="M 52 118 Q 44 116 40 108" />
+    <path d="M 55 100 Q 47 99 43 92" />
+    <path d="M 51 84 Q 44 84 40 78" />
+
+    <path d="M 142 138 Q 154 122 148 104 Q 144 90 150 76" />
+    <path d="M 148 118 Q 156 116 160 108" />
+    <path d="M 145 100 Q 153 99 157 92" />
+    <path d="M 149 84 Q 156 84 160 78" />
+  </g>
+
+  <!-- open book -->
+  <g transform="translate(100 108)">
+    <path d="M 0 -6 C -22 -16 -38 -13 -38 -13 L -38 20 C -38 20 -22 17 0 27 C 22 17 38 20 38 20 L 38 -13 C 38 -13 22 -16 0 -6 Z"
+          fill="#12100b" stroke="url(#accentStroke)" stroke-width="2" stroke-linejoin="round" />
+    <path d="M 0 -6 L 0 27" stroke="url(#accentStroke)" stroke-width="1.4" />
+    <path d="M -30 -8 Q -16 -12 -4 -4" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+    <path d="M -30 -1 Q -16 -5 -4 3" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+    <path d="M -30 6 Q -16 2 -4 10" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+    <path d="M 30 -8 Q 16 -12 4 -4" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+    <path d="M 30 -1 Q 16 -5 4 3" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+    <path d="M 30 6 Q 16 2 4 10" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
+  </g>
+
+  <!-- quill crossing the book -->
+  <g transform="translate(100 100) rotate(-38)">
+    <path d="M 0 -46 C 4 -30 4 -6 0 20 C -2 24 -5 24 -6 20 C -9 -4 -6 -30 0 -46 Z"
+          fill="url(#accentStroke)" />
+    <path d="M 0 -46 C -6 -40 -12 -34 -18 -32" stroke="url(#accentStroke)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M 0 -32 C -5 -28 -10 -24 -14 -22" stroke="#12100b" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M -2 22 L -8 34" stroke="url(#accentStroke)" stroke-width="1.6" stroke-linecap="round" />
+  </g>
+
+  <!-- small five-point star above the book -->
+  <path transform="translate(100 62) scale(0.9)"
+        d="M 0 -8 L 2.2 -2.6 L 8 -2.4 L 3.4 1.2 L 5 7 L 0 3.6 L -5 7 L -3.4 1.2 L -8 -2.4 L -2.2 -2.6 Z"
+        fill="url(#accentStroke)" />
+</svg>

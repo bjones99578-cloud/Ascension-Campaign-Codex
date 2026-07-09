@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ category_plurals.get(category, category + 's') }} — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ category_plurals.get(category, category + 's') }}</h1>
+  <a class="new-entry-btn" href="{{ url_for('new_entry', category=category) }}">+ New {{ category }}</a>
+</div>
+
+{% if entries %}
+  <ul class="entry-list">
+    {% for entry in entries %}
+      <li>
+        {% if entry['image_filename'] %}
+          <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+        {% endif %}
+        <div>
+          <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
+          {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty-state">No {{ category_plurals.get(category, category + 's').lower() }} yet. <a href="{{ url_for('new_entry', category=category) }}">Add the first one</a>.</p>
+{% endif %}
+{% endblock %}

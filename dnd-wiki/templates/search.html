@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Search — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<h1>Search results for “{{ query }}”</h1>
+{% if results %}
+  <ul class="entry-list">
+    {% for entry in results %}
+      <li>
+        {% if entry['image_filename'] %}
+          <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+        {% endif %}
+        <div>
+          <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
+          <span class="tag">{{ entry['category'] }}</span>
+          {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% elif query %}
+  <p class="empty-state">No entries match “{{ query }}”. <a href="{{ url_for('new_entry', name=query) }}">Create an entry called "{{ query }}"?</a></p>
+{% else %}
+  <p class="empty-state">Type something in the search box above.</p>
+{% endif %}
+{% endblock %}

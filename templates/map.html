@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}World Map — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>World Map</h1>
+</div>
+
+{% if map_filename %}
+  <div class="map-controls">
+    <button type="button" class="btn" onclick="mapZoom(-20)">− Zoom Out</button>
+    <button type="button" class="btn" onclick="mapZoom(0, true)">Reset</button>
+    <button type="button" class="btn" onclick="mapZoom(20)">+ Zoom In</button>
+  </div>
+  <div class="map-page-wrap" id="mapWrap">
+    <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
+  </div>
+
+  <div class="divider"><span class="divider-mark"></span></div>
+
+  <h2>Replace the map</h2>
+  <p class="empty-state">Uploading a new image here replaces the current map for everyone.</p>
+{% else %}
+  <p class="empty-state">No map has been uploaded yet. Add your hand-drawn world map below so the whole party can browse it.</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('map_upload') }}" enctype="multipart/form-data" class="entry-form" style="max-width: 420px;">
+  <label>
+    {% if map_filename %}New map image{% else %}Map image{% endif %}
+    <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp" required>
+  </label>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Upload Map</button>
+  </div>
+</form>
+
+<script>
+  (function () {
+    var scale = 100;
+    var img = document.getElementById('mapImage');
+    window.mapZoom = function (delta, reset) {
+      if (!img) return;
+      scale = reset ? 100 : Math.max(40, Math.min(300, scale + delta));
+      img.style.width = scale + '%';
+    };
+  })();
+</script>
+{% endblock %}

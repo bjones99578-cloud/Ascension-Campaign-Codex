@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Ascension Campaign Codex{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='crest.svg') }}">
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="{{ url_for('index') }}">
+      <img class="brand-crest" src="{{ url_for('static', filename='crest.svg') }}" alt="">
+      <span class="brand-text">Ascension Campaign Codex</span>
+    </a>
+    <form class="search-form" action="{{ url_for('search') }}" method="get">
+      <input type="text" name="q" placeholder="Search the codex…" value="{{ request.args.get('q', '') }}">
+      <button type="submit">Search</button>
+    </form>
+    <a class="new-entry-btn" href="{{ url_for('new_entry') }}">+ New Entry</a>
+  </div>
+  <nav class="category-nav">
+    <a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">Map</a>
+    {% for cat in categories %}
+      <a href="{{ url_for('category_view', category=cat) }}" class="{% if request.path == url_for('category_view', category=cat) %}active{% endif %}">
+        {{ category_plurals.get(cat, cat + 's') }} <span class="count">{{ category_counts.get(cat, 0) }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+</header>
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <p>The Ascension Campaign Codex — write freely, link with <code>[[Entry Name]]</code>.</p>
+</footer>
+</body>
+</html>

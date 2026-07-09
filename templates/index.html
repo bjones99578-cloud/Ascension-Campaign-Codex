@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Ascension Campaign Codex — Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>The Ascension Campaign Codex</h1>
+  <p>Track cities, characters, organizations, locations, items, and quests as your world grows. Anyone in the party can add or edit an entry.</p>
+</section>
+
+{% if map_filename %}
+  <a class="map-preview" href="{{ url_for('map_view') }}">
+    <img src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
+    <span class="map-preview-label">🗺 View the World Map</span>
+  </a>
+{% else %}
+  <a class="map-preview ornate-frame" href="{{ url_for('map_view') }}" style="display:flex; align-items:center; justify-content:center; min-height:120px; text-decoration:none;">
+    <span class="empty-state">🗺 No world map uploaded yet — click to add one</span>
+  </a>
+{% endif %}
+
+<section class="category-grid">
+  {% for cat in categories %}
+    <a class="category-card" href="{{ url_for('category_view', category=cat) }}">
+      <h2>{{ category_plurals.get(cat, cat + 's') }}</h2>
+      <span class="category-card-count">{{ category_counts.get(cat, 0) }}</span>
+    </a>
+  {% endfor %}
+</section>
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+<section class="recent-entries">
+  <h2>Recently Updated</h2>
+  {% if recent %}
+    <ul class="entry-list">
+      {% for entry in recent %}
+        <li>
+          {% if entry['image_filename'] %}
+            <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+          {% endif %}
+          <div>
+            <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
+            <span class="tag">{{ entry['category'] }}</span>
+            {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty-state">No entries yet. <a href="{{ url_for('new_entry') }}">Create the first one</a> — maybe start with your home city or your character.</p>
+  {% endif %}
+</section>
+{% endblock %}
