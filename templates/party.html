@@ -1,13 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Party Roster — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-character{% endblock %}
+{% block page_class %}theme-roster-sports{% endblock %}
 {% block content %}
-<div class="themed-banner ornate-frame">
+{% set seated_count = slot_cards|selectattr('character')|list|length %}
+<div class="themed-banner ornate-frame roster-league-banner">
   <span class="corner-bl"></span><span class="corner-br"></span>
   <div class="page-header">
     <div class="themed-header-title">
       <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
       <h1>Ascension Party Roster</h1>
+    </div>
+    <div class="roster-league-record">
+      <span class="roster-league-record-num">{{ seated_count }}<span class="roster-league-record-den">/5</span></span>
+      <span class="roster-league-record-label">Roster Filled</span>
     </div>
   </div>
   <p class="summary">Five slots, five destinies. Each hero's card takes on the colors of their calling — a Ranger's card glows woodland green, a Wizard's arcane blue.</p>
@@ -18,9 +24,9 @@
     {% set theme_class = 'class-' ~ card.theme_slug if card.character and card.theme_slug else 'cat-character' %}
     <div class="roster-slot ornate-frame {{ theme_class }} {% if not card.character %}roster-slot-empty{% endif %}">
       <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="roster-jersey-num" aria-hidden="true">{{ card.slot }}</div>
       {% if card.character %}
         {% set c = card.character %}
-        <div class="roster-slot-num">Slot {{ card.slot }}</div>
         {% if c['image_filename'] %}
           <img class="roster-portrait" src="{{ url_for('uploaded_file', filename=c['image_filename']) }}" alt="{{ c['name'] }}">
         {% else %}
@@ -30,22 +36,24 @@
         <h2 class="roster-name"><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></h2>
         {% if c['player_name'] %}<p class="roster-player">Played by {{ c['player_name'] }}</p>{% endif %}
 
-        <p class="roster-build">
-          {{ c['species'] or 'Unknown Species' }} {{ c['char_class'] or 'Unknown Class' }}{% if c['subclass'] %} <span class="roster-subclass">({{ c['subclass'] }})</span>{% endif %}
-          {% if c['level'] %}<span class="tag cat-character">Lvl {{ c['level'] }}</span>{% endif %}
+        <p class="roster-position-tag">
+          {{ c['species'] or 'Unknown Species' }} · {{ c['char_class'] or 'Unknown Class' }}{% if c['subclass'] %} <span class="roster-subclass">({{ c['subclass'] }})</span>{% endif %}
+          {% if c['level'] %}<span class="roster-level-badge">LVL {{ c['level'] }}</span>{% endif %}
         </p>
+
+        {% set has_combat_stats = c['armor_class'] or c['hit_points'] or c['speed'] or c['passive_perception'] %}
+        {% if has_combat_stats %}
+          <div class="roster-stat-bar">
+            {% if c['armor_class'] %}<div class="roster-stat"><span class="roster-stat-value">{{ c['armor_class'] }}</span><span class="roster-stat-label">AC</span></div>{% endif %}
+            {% if c['hit_points'] %}<div class="roster-stat"><span class="roster-stat-value">{{ c['hit_points'] }}</span><span class="roster-stat-label">HP</span></div>{% endif %}
+            {% if c['speed'] %}<div class="roster-stat"><span class="roster-stat-value">{{ c['speed'] }}</span><span class="roster-stat-label">SPD</span></div>{% endif %}
+            {% if c['passive_perception'] %}<div class="roster-stat"><span class="roster-stat-value">{{ c['passive_perception'] }}</span><span class="roster-stat-label">PP</span></div>{% endif %}
+          </div>
+        {% endif %}
 
         <dl class="roster-facts">
           {% if c['character_status'] %}
             <div><dt>Status</dt><dd>{{ c['character_status'] }}</dd></div>
-          {% endif %}
-          {% set combat_parts = [] %}
-          {% if c['armor_class'] %}{% set _ = combat_parts.append('AC ' ~ c['armor_class']) %}{% endif %}
-          {% if c['hit_points'] %}{% set _ = combat_parts.append('HP ' ~ c['hit_points']) %}{% endif %}
-          {% if c['speed'] %}{% set _ = combat_parts.append(c['speed'] ~ ' ft.') %}{% endif %}
-          {% if c['passive_perception'] %}{% set _ = combat_parts.append('PP ' ~ c['passive_perception']) %}{% endif %}
-          {% if combat_parts %}
-            <div><dt>Combat</dt><dd>{{ combat_parts|join(' · ') }}</dd></div>
           {% endif %}
           {% if card.home_city %}
             <div><dt>Home City</dt><dd><a href="{{ url_for('entry_detail', entry_id=card.home_city['id']) }}">{{ card.home_city['name'] }}</a></dd></div>
@@ -66,8 +74,7 @@
           </form>
         </div>
       {% else %}
-        <div class="roster-slot-num">Slot {{ card.slot }}</div>
-        <p class="empty-state roster-empty-hint">This seat is open.</p>
+        <p class="empty-state roster-empty-hint">Open roster spot</p>
 
         <a class="btn btn-primary roster-new-btn" href="{{ url_for('new_entry', category='Character', pc_slot=card.slot) }}">+ Create New Character</a>
 

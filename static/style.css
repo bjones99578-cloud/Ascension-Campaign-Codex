@@ -23,6 +23,11 @@
   --font-display: "Cinzel Decorative", "Cinzel", Georgia, serif;
   --font-heading: "Cinzel", Georgia, serif;
   --font-body: "EB Garamond", "Iowan Old Style", Georgia, serif;
+  /* Used only by the Party Roster's "sports promotion" theme below -- a
+     bold condensed poster face for jersey numbers/stat lines, deliberately
+     un-fantasy so that one page reads like a team roster graphic rather
+     than another illuminated-manuscript page. */
+  --font-sport: "Anton", "Arial Narrow", sans-serif;
 
   /* Default category theme = the site's own gold, used wherever no specific
      category context applies (mixed listings, utility pages). */
@@ -754,16 +759,22 @@ code {
     radial-gradient(circle at 20% 15%, var(--cat-glow), transparent 55%),
     radial-gradient(circle at 85% 85%, var(--cat-glow), transparent 55%);
   box-shadow: 0 0 20px var(--cat-glow), inset 0 0 30px rgba(107, 88, 66, 0.12);
+  overflow: hidden;
 }
 
-.roster-slot-num {
-  align-self: flex-start;
-  font-family: var(--font-heading);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+/* Big "ghost" jersey number, painted first in the markup so every later
+   element in the card naturally layers on top of it in normal paint
+   order -- no z-index juggling needed. */
+.roster-jersey-num {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.55rem;
+  font-family: var(--font-sport);
+  font-size: 4.25rem;
+  line-height: 1;
   color: var(--cat-color);
-  margin-bottom: 0.5rem;
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .roster-portrait {
@@ -780,8 +791,50 @@ code {
 .roster-name { margin: 0 0 0.15rem; font-family: var(--font-display); font-size: 1.15rem; text-shadow: 0 0 10px var(--cat-glow); }
 .roster-name a { color: var(--cat-light); }
 .roster-player { margin: 0 0 0.6rem; color: var(--text-muted); font-family: var(--font-heading); font-size: 0.85rem; }
-.roster-build { margin: 0 0 0.9rem; font-family: var(--font-heading); }
+.roster-position-tag { margin: 0 0 0.9rem; font-family: var(--font-heading); }
 .roster-subclass { color: var(--text-muted); }
+.roster-level-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--cat-color);
+  color: #fff;
+  font-family: var(--font-sport);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+}
+
+/* AC / HP / Speed / Passive Perception, read like the stat line printed
+   under a player's name on a trading card. Any subset can be missing
+   (see has_combat_stats in party.html) -- flex just shares the row
+   evenly among whichever boxes are actually present. */
+.roster-stat-bar {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0 0 1.1rem;
+}
+.roster-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.45rem 0.3rem;
+  border-radius: 6px;
+  border: 1px solid var(--cat-color);
+  background: rgba(0, 0, 0, 0.15);
+}
+.roster-stat-value { font-family: var(--font-sport); font-size: 1.35rem; line-height: 1; color: var(--cat-light); }
+.roster-stat-label {
+  margin-top: 0.2rem;
+  font-family: var(--font-heading);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
 
 .roster-facts {
   width: 100%;
@@ -830,6 +883,81 @@ code {
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text);
+}
+
+/* ---------- Party Roster: sports promotion theme ---------- */
+/* The header banner stays on the site's normal parchment background --
+   same reasoning as the Map theme: the "Roster Filled" record badge is
+   a single small opaque accent, not a whole-page reskin, so it doesn't
+   need to fight the banner's existing light-on-dark-ink text contrast.
+   Each seated player's card, though, IS a single self-contained opaque
+   box -- that's reskinned into dark foil trading-card stock, with a
+   diagonal team-color corner banner and a ghost jersey number, which is
+   where the "sports promotion" feeling actually needs to live. Empty
+   roster slots are deliberately left on the normal light card background
+   below, since they hold a real assignment form whose label/select text
+   assumes that contrast. */
+
+.roster-league-record {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1.1rem;
+  border: 2px solid var(--cat-color);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+  box-shadow: 0 0 14px var(--cat-glow);
+}
+.roster-league-record-num {
+  font-family: var(--font-sport);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--cat-light);
+}
+.roster-league-record-den {
+  font-family: var(--font-sport);
+  font-size: 1.05rem;
+  color: var(--text-muted);
+}
+.roster-league-record-label {
+  margin-top: 0.15rem;
+  font-family: var(--font-heading);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+/* Dark card stock with a diagonal team-color corner banner, like a foil
+   trading card lying face-up on a felt table. */
+.theme-roster-sports .roster-slot {
+  background-color: #12151b;
+  background-image:
+    linear-gradient(135deg, var(--cat-color) 0%, transparent 22%),
+    radial-gradient(circle at 20% 12%, var(--cat-glow), transparent 55%),
+    radial-gradient(circle at 85% 90%, var(--cat-glow), transparent 55%),
+    linear-gradient(165deg, #1c222c, #0d1015);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 0 20px var(--cat-glow), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+.theme-roster-sports .roster-name a { color: #fdfbf4; }
+.theme-roster-sports .roster-player { color: #b7b0a0; }
+.theme-roster-sports .roster-position-tag { color: #d9d3c3; }
+.theme-roster-sports .roster-subclass { color: #918a79; }
+.theme-roster-sports .roster-facts dt { color: #918a79; }
+.theme-roster-sports .roster-facts dd { color: #e9e4d8; }
+.theme-roster-sports .roster-facts dd a { color: var(--cat-color); }
+.theme-roster-sports .roster-facts > div { border-bottom-color: rgba(255, 255, 255, 0.1); }
+.theme-roster-sports .roster-stat { background: rgba(0, 0, 0, 0.3); }
+.theme-roster-sports .roster-stat-label { color: #918a79; }
+
+/* Empty slots keep the normal parchment card -- they hold a working
+   assignment form, not a filled trading card. */
+.theme-roster-sports .roster-slot-empty {
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(circle at 20% 15%, var(--cat-glow), transparent 55%),
+    radial-gradient(circle at 85% 85%, var(--cat-glow), transparent 55%);
+  box-shadow: 0 0 20px var(--cat-glow), inset 0 0 30px rgba(107, 88, 66, 0.12);
 }
 
 /* ---------- loot tracker ---------- */
