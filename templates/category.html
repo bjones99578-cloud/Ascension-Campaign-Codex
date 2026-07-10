@@ -25,7 +25,8 @@
 {% endmacro %}
 
 {% block content %}
-<div class="themed-banner">
+<div class="themed-banner ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
   <div class="page-header">
     <div class="themed-header-title">
       <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ category.lower() ~ '.svg') }}" alt="">
@@ -39,16 +40,14 @@
   {% if category == "Character" %}
     {# Party Members get their own table, separate from NPCs/other characters,
        so the roster's core cast doesn't get lost in a long character list. #}
-    <h2>Party Members</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>Party Members<span class="section-heading-mark"></span></div>
     {% if party_members %}
       {{ character_rows(party_members) }}
     {% else %}
       <p class="empty-state">No party members yet — mark a Character's "Party Member" field as Yes to list them here.</p>
     {% endif %}
 
-    <div class="divider"><span class="divider-mark"></span></div>
-
-    <h2>Other Characters</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>Other Characters<span class="section-heading-mark"></span></div>
     {% if npcs %}
       {{ character_rows(npcs) }}
     {% else %}

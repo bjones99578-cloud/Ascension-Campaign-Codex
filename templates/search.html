@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Search — Ascension Campaign Codex{% endblock %}
 {% block content %}
-<div class="page-header">
-  <h1>Search</h1>
+<div class="themed-banner ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
+  <div class="page-header">
+    <h1>Search</h1>
+  </div>
 </div>
 
 <form method="get" action="{{ url_for('search') }}" class="entry-form search-filters-form">
@@ -46,20 +49,19 @@
 
 {% if results %}
   <p class="summary">{{ results|length }} result{{ '' if results|length == 1 else 's' }}.</p>
-  <ul class="entry-list">
+  <div class="chronicle-grid">
     {% for entry in results %}
-      <li class="cat-{{ entry['category'].lower() }}">
+      <div class="chronicle-card cat-{{ entry['category'].lower() }}">
         {% if entry['image_filename'] %}
-          <img class="entry-thumb" src="{{ url_for('uploaded_file', filename=entry['image_filename']) }}" alt="">
+          <img class="chronicle-card-thumb" src="{{ url_for('uploaded_file', filename=entry['image_filename']) }}" alt="">
         {% endif %}
-        <div>
-          <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
-          <span class="tag">{{ category_labels.get(entry['category'], entry['category']) }}</span>
-          {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
-        </div>
-      </li>
+        <span class="chronicle-card-label">{{ category_labels.get(entry['category'], entry['category']) }}</span>
+        <h3><a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a></h3>
+        {% if entry['summary'] %}<p>{{ entry['summary'] }}</p>{% endif %}
+        <img class="chronicle-card-icon" src="{{ url_for('static', filename='icons/' ~ entry['category'].lower() ~ '.svg') }}" alt="">
+      </div>
     {% endfor %}
-  </ul>
+  </div>
 {% elif searched %}
   <p class="empty-state">
     No entries match those filters.

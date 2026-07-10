@@ -168,6 +168,123 @@ code {
   flex-shrink: 0;
 }
 
+/* A smaller, inline cousin of .divider -- flanking dashes either side of a
+   section's own heading text, rather than a standalone bar between
+   sections. Used on the "reading" pages (homepage, entry pages, category
+   listings, search, reference, Party Roster, Timeline) above a themed list
+   or grid, e.g. "◆ Recently Chronicled ◆". */
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  text-align: center;
+  color: var(--cat-light);
+  margin: 2.25rem 0 1.25rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.section-heading::before, .section-heading::after {
+  content: "";
+  flex: 1;
+  max-width: 6rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.section-heading-mark {
+  width: 8px; height: 8px;
+  border: 1px solid var(--cat-color);
+  box-shadow: 0 0 6px var(--cat-glow);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ---------- "Chronicle" cards (reading pages only) ---------- */
+/* The homepage's single most-recently-updated entry, featured as one big
+   illuminated-manuscript-style card -- framed with .ornate-frame corner
+   marks in the template, same as an entry's own detail page. */
+.chronicle-spotlight {
+  padding: 2rem 2.25rem;
+  margin-bottom: 2.5rem;
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+  box-shadow: 0 0 20px var(--cat-glow);
+}
+.chronicle-spotlight.ornate-frame { border-color: var(--cat-color); }
+.chronicle-spotlight .chronicle-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+.chronicle-spotlight .chronicle-meta .tag { margin-left: 0; }
+.chronicle-spotlight h2 {
+  font-family: var(--font-display);
+  color: var(--cat-light);
+  font-size: 1.7rem;
+  margin: 0 0 0.85rem;
+}
+.chronicle-spotlight p { margin: 0; color: var(--text); }
+.chronicle-spotlight p::first-letter {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  float: left;
+  line-height: 0.8;
+  padding: 0.06em 0.12em 0 0;
+  color: var(--cat-color);
+}
+
+/* A grid of smaller teaser cards -- used for the homepage's "Recently
+   Chronicled" feed and Search results -- each with a colored top bar in
+   that entry's own category color, echoing the spotlight card's language
+   at a smaller, repeatable scale. No corner brackets here (reserved for
+   single hero-style cards) -- with many of these on a page at once, full
+   frames on every one would be too busy. */
+.chronicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 1.1rem;
+}
+.chronicle-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-top: 4px solid var(--cat-color);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem 1.4rem;
+}
+.chronicle-card-thumb {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0.15rem;
+}
+.chronicle-card-label {
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat-color);
+}
+.chronicle-card h3 { margin: 0; font-size: 1.05rem; font-family: var(--font-heading); }
+.chronicle-card h3 a { color: var(--text); }
+.chronicle-card h3 a:hover { color: var(--cat-light); text-decoration: none; }
+.chronicle-card p { margin: 0; color: var(--text-muted); font-size: 0.92rem; }
+.chronicle-card-icon {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.85rem;
+  width: 20px;
+  height: 20px;
+  opacity: 0.5;
+  filter: drop-shadow(0 0 3px var(--cat-glow));
+}
+
 /* ---------- header ---------- */
 
 .site-header {
@@ -281,11 +398,21 @@ code {
 }
 
 .hero { margin-bottom: 2.5rem; text-align: center; }
+.hero-tagline {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
 .hero h1 {
   font-family: var(--font-display);
-  font-size: 2.1rem;
+  font-size: 2.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--accent-deep);
-  margin-bottom: 0.5rem;
+  margin: 0.3rem 0 0.6rem;
 }
 .hero p { color: var(--text-muted); max-width: 55ch; margin: 0 auto; }
 
@@ -300,6 +427,7 @@ code {
   position: relative;
   background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
   border: 1px solid var(--border);
+  border-top: 4px solid var(--cat-color);
   border-radius: var(--radius);
   padding: 1.4rem 1rem;
   text-align: center;
@@ -375,6 +503,12 @@ code {
   margin-left: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+.tag::before {
+  content: "●";
+  margin-right: 0.35em;
+  font-size: 0.65em;
+  vertical-align: 0.1em;
 }
 
 .empty-state { color: var(--text-muted); }
@@ -754,6 +888,7 @@ code {
 .timeline-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--cat-color);
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
 }
@@ -1124,12 +1259,6 @@ code {
    cards additionally pick up a "class-<slug>" class (see CLASS_THEME_SLUGS)
    so each one glows in that class's own ink color, same as a Party Roster card. */
 .reference-section { margin-bottom: 2.5rem; }
-.reference-section h2 {
-  color: var(--cat-light);
-  border-bottom: 1px solid var(--border-soft);
-  padding-bottom: 0.4rem;
-  margin-bottom: 1.2rem;
-}
 .reference-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -1138,6 +1267,7 @@ code {
 .reference-card {
   background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
   border: 1px solid var(--border);
+  border-top: 4px solid var(--cat-color);
   border-radius: var(--radius);
   padding: 1.1rem 1.2rem;
 }

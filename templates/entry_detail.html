@@ -4,7 +4,7 @@
 
 {% macro character_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -30,7 +30,7 @@
 
 {% macro faction_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -57,7 +57,7 @@
 
 {% macro quest_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -82,7 +82,7 @@
 
 {% macro item_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -107,7 +107,7 @@
 
 {% macro location_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -131,7 +131,7 @@
 
 {% macro city_table(title, rows, empty_hint) %}
   <div class="related-block">
-    <h2>{{ title }}</h2>
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
     {% if rows %}
       <table class="related-table">
         <thead>
@@ -156,7 +156,8 @@
 
 {% block content %}
 <article class="entry-detail">
-  <div class="themed-banner">
+  <div class="themed-banner ornate-frame">
+    <span class="corner-bl"></span><span class="corner-br"></span>
     <div class="page-header">
       <div>
         <div class="themed-header-title">

@@ -2,7 +2,8 @@
 {% block title %}Party Roster — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-character{% endblock %}
 {% block content %}
-<div class="themed-banner">
+<div class="themed-banner ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
   <div class="page-header">
     <div class="themed-header-title">
       <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
@@ -15,7 +16,8 @@
 <div class="party-grid">
   {% for card in slot_cards %}
     {% set theme_class = 'class-' ~ card.theme_slug if card.character and card.theme_slug else 'cat-character' %}
-    <div class="roster-slot {{ theme_class }} {% if not card.character %}roster-slot-empty{% endif %}">
+    <div class="roster-slot ornate-frame {{ theme_class }} {% if not card.character %}roster-slot-empty{% endif %}">
+      <span class="corner-bl"></span><span class="corner-br"></span>
       {% if card.character %}
         {% set c = card.character %}
         <div class="roster-slot-num">Slot {{ card.slot }}</div>

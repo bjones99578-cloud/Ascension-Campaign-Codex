@@ -126,7 +126,18 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   banner atop every page, and data-heavy sections (category listings, City
   View, the Party Roster's combat stats, Loot Tracker, and every entry's
   relationship tables) restyled as ledger pages, with ink-line rows, old-style
-  numerals, and a colored header bar per category.
+  numerals, and a colored header bar per category. The pages you actually read
+  lore on — the homepage, entry pages, category listings, Search, Reference,
+  the Party Roster, and the Timeline — go a step further with a "chronicle"
+  treatment: gold corner-bracket frames on the main page banner, a small
+  colored dot on every category tag, flanking-diamond section headings (e.g.
+  "◆ Recently Chronicled ◆"), and an illuminated drop-cap on the first
+  paragraph of an entry's write-up. The homepage additionally spotlights
+  whichever entry was chronicled most recently in one large featured card,
+  with everything else just below it as a grid of smaller colored-top-bar
+  cards. The Map and City View stay in their simpler, uncluttered style,
+  since those are working views you glance at mid-session rather than pages
+  you sit and read.
 - **Party Roster**: the "Party Roster" link in the nav is a fixed 5-slot
   page for your actual player characters. Mark any Character entry as a
   **Party Member** (a field right on the Character form) and fill in their
