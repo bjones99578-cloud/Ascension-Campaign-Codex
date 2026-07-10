@@ -1329,6 +1329,21 @@ code {
   font-family: var(--font-heading);
   letter-spacing: 0.02em;
 }
+.footer-update-form { margin-top: 0.75rem; }
+
+/* ---------- check for updates ---------- */
+.update-result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-body);
+}
+.update-result-message { margin: 0; }
+.update-result-pulled, .update-result-ok { border-color: var(--accent); background: rgba(169, 120, 47, 0.08); }
+.update-result-up_to_date { border-color: var(--border-soft); background: var(--bg-panel); }
+.update-result-error, .update-result-warn { border-color: var(--danger); background: rgba(140, 58, 46, 0.08); color: #6b1f16; }
+.update-result-not_a_repo { border-color: var(--border-soft); background: var(--bg-panel); }
 
 /* Search page: Category + per-category filter dropdowns read best as a
    compact horizontal filter bar rather than .entry-form's default stacked

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Check for Updates — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <h1>Check for Updates</h1>
+    </div>
+  </div>
+  <p class="summary">Pulls the latest code pushed to GitHub and, if auto-reload is set up, restarts the live site to start running it — see the README's "Check for Updates" section for how to configure that.</p>
+</div>
+
+<div class="update-result update-result-{{ result.status }}">
+  <p class="update-result-message">{{ result.message }}</p>
+</div>
+
+{% if result.reload %}
+  <div class="update-result update-result-{{ 'ok' if result.reload.ok else 'warn' }}">
+    <p class="update-result-message">{{ result.reload.message }}</p>
+  </div>
+{% endif %}
+
+<p><a class="btn" href="{{ url_for('index') }}">Back to the wiki</a></p>
+
+{% if result.reload and result.reload.ok %}
+  <meta http-equiv="refresh" content="5;url={{ url_for('index') }}">
+  <p class="hint">Returning to the homepage in a few seconds, once the new code has finished loading…</p>
+{% endif %}
+{% endblock %}

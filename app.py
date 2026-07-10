@@ -9,6 +9,7 @@ import bastion
 import dndbeyond
 import images
 import models
+import updater
 from rendering import render_wiki_content
 
 app = Flask(__name__)
@@ -1381,6 +1382,19 @@ def map_pin_toggle_discovered(pin_id):
     if pin is not None:
         models.set_pin_discovered(conn, pin_id, not pin["discovered"])
     return redirect(url_for("map_view", map_id=pin["map_id"] if pin else None))
+
+
+@app.route("/check-for-updates", methods=["POST"])
+def check_for_updates():
+    """The site footer's "Check for Updates" button: pulls the latest code
+    from GitHub (fetch-then-ff-only-pull, never a merge -- see updater.py)
+    and, if PythonAnywhere's reload API is configured, restarts the live
+    app so it actually starts running what was just pulled. Nothing here
+    touches the database or uploaded images -- it's purely a code-deployment
+    shortcut for whoever's hosting this, standing in for opening a Bash
+    console and running `git pull` + clicking Reload by hand."""
+    result = updater.check_and_pull()
+    return render_template("update_result.html", result=result)
 
 
 # Make sure the database tables exist no matter how this app is started.

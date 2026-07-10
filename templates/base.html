@@ -57,6 +57,9 @@
 </main>
 <footer class="site-footer">
   <p>The Ascension Campaign Codex — write freely, link with <code>[[Entry Name]]</code>.</p>
+  <form method="post" action="{{ url_for('check_for_updates') }}" class="footer-update-form">
+    <button type="submit" class="btn btn-sm">Check for Updates</button>
+  </form>
 </footer>
 </body>
 </html>

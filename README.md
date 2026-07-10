@@ -537,7 +537,55 @@ reminder on your calendar if your group sometimes goes quiet for a while.
    your party.
 
 To pull in future updates you push to GitHub: open a Bash console, `cd
-mysite && git pull`, then hit **Reload** on the Web tab again.
+mysite && git pull`, then hit **Reload** on the Web tab again — or set up
+the in-app **Check for Updates** button below so you don't need a console
+at all.
+
+#### "Check for Updates" button (optional, PythonAnywhere only)
+
+Every page has a small **Check for Updates** button in the footer. Clicking
+it does exactly what the manual steps above do — `git fetch` + a
+fast-forward-only `git pull` from GitHub — right from the browser, no Bash
+console needed. It's deliberately conservative: it only ever fast-forwards
+(never merges or rebases), and if the checkout has diverged for any reason
+it fails loudly and changes nothing on disk rather than risk a conflict
+with nobody around to resolve it. It only touches code — your database and
+uploaded images are never part of the git repo (see `.gitignore`), so
+neither is ever affected by a click.
+
+By itself, that button only pulls new *files* — the already-running app
+keeps executing the old code in memory until something restarts it, same
+as any other deployment. To have the button also restart the live site
+automatically (so "Check for Updates" really does finish the whole job in
+one click), add three more lines to the same WSGI configuration file from
+step 5 above:
+
+```python
+os.environ['PYTHONANYWHERE_USERNAME'] = 'yourusername'
+os.environ['PYTHONANYWHERE_DOMAIN'] = 'yourusername.pythonanywhere.com'
+os.environ['PYTHONANYWHERE_API_TOKEN'] = 'paste-your-api-token-here'
+```
+
+Get the token from your PythonAnywhere **Account** page → **API Token** tab
+(generate one if you haven't already) — treat it like a password: it can
+control your *entire* PythonAnywhere account through their API, not just
+this one web app, so it belongs only in this WSGI file (which never leaves
+your PythonAnywhere account) and nowhere in the public GitHub repo. Click
+**Reload** once after saving the WSGI file for these to take effect; every
+"Check for Updates" click after that will restart the site itself when it
+actually pulls something new.
+
+If you'd rather not add that credential at all, that's completely fine —
+leave those three lines out and the button still pulls the latest code
+every time; you'll just see a reminder to click **Reload** yourself
+afterward, same as today.
+
+Worth knowing since this wiki has no login system: this button is visible
+and clickable by anyone with the link, the same as every other button in
+the app. That's fine for what it does — it only ever pulls from your own
+GitHub repo, never runs anything a visitor typed in — but repeated clicks
+do mean repeated site restarts, so treat it as a "the party can self-serve
+updates" convenience rather than something to mash.
 
 ### Option C: Fly.io / Railway (cheaper paid alternatives to Render)
 
