@@ -3,13 +3,18 @@ import re
 import sqlite3
 from datetime import datetime, timezone
 
-# Overridable via the DB_PATH environment variable so a deployment with a
-# persistent disk (e.g. Render's paid Starter plan + a mounted Disk) can
-# point this at a path inside that disk instead of the app's own ephemeral
-# code directory -- otherwise every redeploy/restart/spin-down silently
-# resets the whole campaign to a fresh, empty database. Defaults to the
-# original relative path for local/dev use, where that risk doesn't apply.
-DB_PATH = os.environ.get("DB_PATH", "wiki.db")
+# Anchored to this file's own directory rather than left as a bare relative
+# path -- a relative "wiki.db" resolves against the server process's
+# *current working directory*, which isn't guaranteed to be this project
+# folder under every hosting setup (notably PythonAnywhere's WSGI-based
+# Manual Configuration, where the process doesn't necessarily start with its
+# cwd here). Overridable via the DB_PATH environment variable so a
+# deployment with a persistent disk (e.g. Render's paid Starter plan + a
+# mounted Disk) can still point this at a path inside that disk instead --
+# otherwise every redeploy/restart/spin-down silently resets the whole
+# campaign to a fresh, empty database.
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.environ.get("DB_PATH", os.path.join(APP_ROOT, "wiki.db"))
 
 CATEGORIES = [
     "Region",

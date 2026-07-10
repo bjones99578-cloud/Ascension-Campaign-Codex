@@ -7,13 +7,21 @@ import requests
 from PIL import Image, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 
-# Overridable via the UPLOAD_DIR environment variable, same reasoning as
-# models.DB_PATH -- point this at a persistent disk in production so
-# uploaded portraits, city art, and map images survive redeploys/restarts.
-# Served through the app's own /uploads/<filename> route (see app.py),
-# not Flask's built-in /static route, since a mounted disk generally lives
-# outside the app's own static folder.
-UPLOAD_DIR = os.environ.get("UPLOAD_DIR", os.path.join("static", "uploads"))
+# Anchored to this file's own directory rather than left as a bare relative
+# path -- a relative "static/uploads" resolves against the server process's
+# *current working directory*, which for a plain `python app.py` run is
+# always this project folder, but under a WSGI host (PythonAnywhere's Manual
+# Configuration setup, in particular) is whatever directory the WSGI loader
+# happened to start from, not necessarily this one. That mismatch doesn't
+# error -- it just silently reads/writes the wrong folder, so uploads appear
+# to succeed but then 404 when the page tries to display them. Overridable
+# via the UPLOAD_DIR environment variable, same reasoning as models.DB_PATH,
+# to point this at a persistent disk in production (e.g. Render's Disk
+# add-on). Served through the app's own /uploads/<filename> route (see
+# app.py), not Flask's built-in /static route, since a mounted disk
+# generally lives outside the app's own static folder.
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", os.path.join(APP_ROOT, "static", "uploads"))
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 # Longest-edge cap (pixels) applied to every stored image. Nothing in the
