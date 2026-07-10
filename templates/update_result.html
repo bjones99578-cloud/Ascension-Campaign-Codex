@@ -23,7 +23,7 @@
 <p><a class="btn" href="{{ url_for('index') }}">Back to the wiki</a></p>
 
 {% if result.reload and result.reload.ok %}
-  <meta http-equiv="refresh" content="5;url={{ url_for('index') }}">
-  <p class="hint">Returning to the homepage in a few seconds, once the new code has finished loading…</p>
+  <meta http-equiv="refresh" content="10;url={{ url_for('index') }}">
+  <p class="hint">Returning to the homepage in about 10 seconds, once the restart has finished — if it lands on an error, just refresh once more.</p>
 {% endif %}
 {% endblock %}

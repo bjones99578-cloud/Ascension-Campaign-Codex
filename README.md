@@ -580,6 +580,15 @@ leave those three lines out and the button still pulls the latest code
 every time; you'll just see a reminder to click **Reload** yourself
 afterward, same as today.
 
+Heads up: the actual restart happens a few seconds *after* the page tells
+you it's been triggered, on purpose — the "Reload triggered" page is being
+served by the same worker process that's about to get restarted, so firing
+the restart any sooner than that would risk cutting off the very response
+confirming it worked (you'd see a raw PythonAnywhere "502 :-(" page instead,
+even though the pull itself succeeded fine). The page auto-returns to the
+homepage about 10 seconds later; if that lands on an error, just refresh
+once more — the restart is almost certainly done by then.
+
 Worth knowing since this wiki has no login system: this button is visible
 and clickable by anyone with the link, the same as every other button in
 the app. That's fine for what it does — it only ever pulls from your own

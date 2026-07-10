@@ -18,6 +18,8 @@ web button click with nobody at a terminal to fix things if it goes wrong:
 """
 import os
 import subprocess
+import threading
+import time
 
 import requests
 
@@ -27,6 +29,17 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 # worker) forever -- these are generous but bounded.
 GIT_TIMEOUT = 60
 RELOAD_TIMEOUT = 30
+
+# The reload API call is triggered FROM INSIDE the very request that then
+# has to render the "reload triggered" result page back to the browser.
+# Calling it synchronously races PythonAnywhere's own restart against
+# Flask finishing that HTTP response -- lose the race (which happens in
+# practice) and the worker gets recycled mid-response, which the browser
+# (and PythonAnywhere's own proxy) sees as a bare "502 :-(" page instead of
+# the friendly result page, even though the git pull itself succeeded fine.
+# Deferring the actual API call to a background thread (see trigger_reload)
+# gives this request time to finish writing its response first.
+RELOAD_DELAY = 3
 
 # Only needed for the auto-reload half -- see the README for exactly where
 # to find these in your PythonAnywhere account (Account -> API Token tab)
@@ -116,35 +129,51 @@ def check_and_pull():
 
 
 def trigger_reload():
-    """Calls PythonAnywhere's official web-app reload API so the already-
-    running process actually starts executing the code that was just
-    pulled -- a git pull alone only changes the files on disk; the live
-    process keeps running the old code in memory until something reloads
-    it. Returns {'configured': False, ...} if the three env vars above
-    aren't all set -- that's not an error, it just means whoever's running
-    this needs to click Reload on the PythonAnywhere Web tab by hand once
-    to finish applying the update."""
+    """Kicks off PythonAnywhere's official web-app reload API, on a short
+    delay, so the already-running process actually starts executing the
+    code that was just pulled -- a git pull alone only changes the files
+    on disk; the live process keeps running the old code in memory until
+    something reloads it. Returns {'configured': False, ...} if the three
+    env vars above aren't all set -- that's not an error, it just means
+    whoever's running this needs to click Reload on the PythonAnywhere Web
+    tab by hand once to finish applying the update.
+
+    The actual API call happens in a background thread after RELOAD_DELAY
+    seconds (see the module docstring/comment above), not before returning
+    from this function -- so this always reports back optimistically
+    ("configured": True, "ok": True) the moment it's kicked off, without
+    waiting to see whether the deferred call actually succeeds. If the
+    token/username/domain are wrong, the restart just won't happen; the
+    outcome of the deferred call itself is only visible in PythonAnywhere's
+    own error log (Web tab -> Log files), since by the time it runs there's
+    no request left to report back to."""
     if not (PYTHONANYWHERE_USERNAME and PYTHONANYWHERE_DOMAIN and PYTHONANYWHERE_API_TOKEN):
         return {
             "configured": False,
             "ok": False,
             "message": "Code pulled, but auto-reload isn't set up — click Reload on your PythonAnywhere Web tab to finish applying the update.",
         }
+
     url = f"https://www.pythonanywhere.com/api/v0/user/{PYTHONANYWHERE_USERNAME}/webapps/{PYTHONANYWHERE_DOMAIN}/reload/"
-    try:
-        resp = requests.post(
-            url, headers={"Authorization": f"Token {PYTHONANYWHERE_API_TOKEN}"}, timeout=RELOAD_TIMEOUT
-        )
-    except requests.RequestException as exc:
-        return {"configured": True, "ok": False, "message": f"Code pulled, but the reload API call failed: {exc}"}
-    if resp.status_code == 200:
-        return {
-            "configured": True,
-            "ok": True,
-            "message": "Reload triggered — the site will be running the new code within a few seconds.",
-        }
+
+    def _reload_after_delay():
+        time.sleep(RELOAD_DELAY)
+        try:
+            resp = requests.post(
+                url, headers={"Authorization": f"Token {PYTHONANYWHERE_API_TOKEN}"}, timeout=RELOAD_TIMEOUT
+            )
+            if resp.status_code != 200:
+                print(f"[updater] reload API returned HTTP {resp.status_code}: {resp.text[:200]}")
+        except requests.RequestException as exc:
+            print(f"[updater] reload API call failed: {exc}")
+
+    threading.Thread(target=_reload_after_delay, daemon=True).start()
     return {
         "configured": True,
-        "ok": False,
-        "message": f"Code pulled, but the reload API returned HTTP {resp.status_code}: {resp.text[:200]}",
+        "ok": True,
+        "message": (
+            "Reload triggered — the site will restart in a few seconds and start running the new "
+            "code. This page (or the homepage) may briefly fail to load right as that happens; if "
+            "it doesn't come back within about 30 seconds, check your PythonAnywhere Web tab's error log."
+        ),
     }
