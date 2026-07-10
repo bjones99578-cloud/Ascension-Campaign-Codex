@@ -29,6 +29,9 @@
   <div class="watchboard">
     <div class="related-block">
       <h2>City Info</h2>
+      {% if selected_city['image_filename'] %}
+        <img class="entry-portrait" src="{{ url_for('static', filename='uploads/' ~ selected_city['image_filename']) }}" alt="{{ selected_city['name'] }}">
+      {% endif %}
       <table class="related-table">
         <tbody>
           <tr><td>Name</td><td><a href="{{ url_for('entry_detail', entry_id=selected_city['id']) }}">{{ selected_city['name'] }}</a></td></tr>

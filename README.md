@@ -92,17 +92,25 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   names, so you can scan and compare entries at a glance instead of opening
   each one.
 - **City View**: the "City View" link in the nav is a one-page watchboard for
-  running a session — pick a city from the dropdown and see its Region,
-  Settlement Size, Government, and Population, its write-up, and live tables
-  of every Character (with Class/Level/Status) and Organization (with
-  Type/Leader/Status/Alignment) connected to it, all on one screen instead of
-  clicking through separate entry pages as the party travels around.
-- **A theme per category**: each of the seven categories has its own custom
-  icon and arcane glow color — emerald for Regions, gold for Cities, violet
-  for Characters, rose for Organizations, cyan for Locations, copper for
-  Items, and indigo for Quests — carried through the nav, category badges,
-  category pages, and entry pages, so each type of entry has its own
-  distinct, glowing fantasy feel.
+  running a session — pick a city from the dropdown and see its picture (if
+  it has one), its Region, Settlement Size, Government, and Population, its
+  write-up, and live tables of every Character (with Class/Level/Status) and
+  Organization (with Type/Leader/Status/Alignment) connected to it, all on
+  one screen instead of clicking through separate entry pages as the party
+  travels around.
+- **A theme per category**: each of the eight categories has its own custom
+  icon and ink color — deep gold for Regions, brown-gold for Cities, violet
+  for Characters, deep rose for Organizations, teal for Locations, rust for
+  Items, indigo for Quests, and warm brown for Session Logs — carried through
+  the nav, category badges, category pages, and entry pages, so each type of
+  entry has its own distinct look at a glance.
+- **Look and feel**: the whole codex is styled like a hand-kept fantasy
+  journal rather than a flat wiki — a warm aged-parchment background with a
+  subtle paper-grain texture, ink-brown text, an illuminated-manuscript-style
+  banner atop every page, and data-heavy sections (category listings, City
+  View, the Party Roster's combat stats, Loot Tracker, and every entry's
+  relationship tables) restyled as ledger pages, with ink-line rows, old-style
+  numerals, and a colored header bar per category.
 - **Party Roster**: the "Party Roster" link in the nav is a fixed 5-slot
   page for your actual player characters. Mark any Character entry as a
   **Party Member** (a field right on the Character form) and fill in their

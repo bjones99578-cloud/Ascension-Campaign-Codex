@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Ascension Campaign Codex crest">
   <defs>
     <radialGradient id="crestBg" cx="50%" cy="42%" r="65%">
-      <stop offset="0%" stop-color="#232931" />
-      <stop offset="100%" stop-color="#14171b" />
+      <stop offset="0%" stop-color="#4a3320" />
+      <stop offset="100%" stop-color="#241a10" />
     </radialGradient>
     <linearGradient id="accentStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8ec0e8" />
-      <stop offset="50%" stop-color="#5b9bd5" />
-      <stop offset="100%" stop-color="#2f5f8f" />
+      <stop offset="0%" stop-color="#e6c878" />
+      <stop offset="50%" stop-color="#c9972f" />
+      <stop offset="100%" stop-color="#8a6118" />
     </linearGradient>
   </defs>
 
@@ -59,7 +59,7 @@
   <!-- open book -->
   <g transform="translate(100 108)">
     <path d="M 0 -6 C -22 -16 -38 -13 -38 -13 L -38 20 C -38 20 -22 17 0 27 C 22 17 38 20 38 20 L 38 -13 C 38 -13 22 -16 0 -6 Z"
-          fill="#12100b" stroke="url(#accentStroke)" stroke-width="2" stroke-linejoin="round" />
+          fill="#241a10" stroke="url(#accentStroke)" stroke-width="2" stroke-linejoin="round" />
     <path d="M 0 -6 L 0 27" stroke="url(#accentStroke)" stroke-width="1.4" />
     <path d="M -30 -8 Q -16 -12 -4 -4" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
     <path d="M -30 -1 Q -16 -5 -4 3" fill="none" stroke="url(#accentStroke)" stroke-width="0.8" opacity="0.7" />
@@ -74,7 +74,7 @@
     <path d="M 0 -46 C 4 -30 4 -6 0 20 C -2 24 -5 24 -6 20 C -9 -4 -6 -30 0 -46 Z"
           fill="url(#accentStroke)" />
     <path d="M 0 -46 C -6 -40 -12 -34 -18 -32" stroke="url(#accentStroke)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-    <path d="M 0 -32 C -5 -28 -10 -24 -14 -22" stroke="#12100b" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M 0 -32 C -5 -28 -10 -24 -14 -22" stroke="#241a10" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.5"/>
     <path d="M -2 22 L -8 34" stroke="url(#accentStroke)" stroke-width="1.6" stroke-linecap="round" />
   </g>
 

@@ -1,70 +1,77 @@
 :root {
-  --bg: #14171b;
-  --bg-panel: #1c2126;
-  --bg-card: #232931;
-  --border: #3c4653;
-  --border-soft: #333b46;
-  --text: #eef1f5;
-  --text-muted: #98a4b1;
-  --accent: #5b9bd5;
-  --accent-bright: #8ec0e8;
-  --accent-hover: #79b2e0;
-  --danger: #a8433a;
-  --danger-hover: #c14f44;
-  --link: #8ec0e8;
+  --bg: #ddcda0;
+  --bg-panel: #e8dab3;
+  --bg-card: #f7f0db;
+  --border: #a3855c;
+  --border-soft: #cbb488;
+  --text: #3b2a1c;
+  --text-muted: #6b5842;
+  --accent: #a9782f;
+  --accent-bright: #cfa544;
+  --accent-hover: #b98d3a;
+  --accent-deep: #7d5717;
+  --danger: #8c3a2e;
+  --danger-hover: #a8483a;
+  --link: #35607a;
   --radius: 8px;
 
-  --parchment: #f4f6f9;
-  --parchment-dark: #e3e8ee;
-  --ink: #232931;
-  --ink-muted: #5b6773;
+  --parchment: #f9f2e0;
+  --parchment-dark: #ecdfba;
+  --ink: #2c1e14;
+  --ink-muted: #6b5842;
 
   --font-display: "Cinzel Decorative", "Cinzel", Georgia, serif;
   --font-heading: "Cinzel", Georgia, serif;
   --font-body: "EB Garamond", "Iowan Old Style", Georgia, serif;
 
-  /* Default category theme = the site's own blue, used wherever no specific
+  /* Default category theme = the site's own gold, used wherever no specific
      category context applies (mixed listings, utility pages). */
   --cat-color: var(--accent);
-  --cat-light: var(--accent-bright);
-  --cat-glow: rgba(91, 155, 213, 0.3);
+  --cat-light: var(--accent-deep);
+  --cat-glow: rgba(169, 120, 47, 0.28);
 }
 
-/* ---------- per-category arcane themes ---------- */
-/* Each category gets its own color + glow. Apply the matching class to a
-   page section (or a single row/tag) and every themed element inside it —
-   dividers, headings, tags, portraits, drop-caps — re-tints automatically
-   through the --cat-* custom properties above. */
-.cat-region       { --cat-color: #34d399; --cat-light: #a7f3d0; --cat-glow: rgba(52, 211, 153, 0.35); }
-.cat-city         { --cat-color: #f4b942; --cat-light: #fde68a; --cat-glow: rgba(244, 185, 66, 0.35); }
-.cat-character    { --cat-color: #a78bfa; --cat-light: #ddd6fe; --cat-glow: rgba(167, 139, 250, 0.35); }
-.cat-organization { --cat-color: #fb7185; --cat-light: #fecdd3; --cat-glow: rgba(251, 113, 133, 0.35); }
-.cat-location     { --cat-color: #22d3ee; --cat-light: #a5f3fc; --cat-glow: rgba(34, 211, 238, 0.35); }
-.cat-item         { --cat-color: #fb923c; --cat-light: #fed7aa; --cat-glow: rgba(251, 146, 60, 0.35); }
-.cat-quest        { --cat-color: #818cf8; --cat-light: #e0e7ff; --cat-glow: rgba(129, 140, 248, 0.35); }
-.cat-sessionlog   { --cat-color: #94a3b8; --cat-light: #cbd5e1; --cat-glow: rgba(148, 163, 184, 0.35); }
+/* ---------- per-category ink themes ---------- */
+/* Each category gets its own colored-ink theme + soft halo. Apply the
+   matching class to a page section (or a single row/tag) and every themed
+   element inside it — dividers, headings, tags, portraits, drop-caps — re-tints
+   automatically through the --cat-* custom properties above. Colors are tuned
+   as deep, saturated "inks" (rather than the neon/pastel pairing this site
+   used before its parchment redesign) so the same value reads clearly as both
+   decorative icon/border tint AND as heading/link text directly on the cream
+   page background. */
+.cat-region       { --cat-color: #3f7d52; --cat-light: #2c5c3b; --cat-glow: rgba(63, 125, 82, 0.28); }
+.cat-city         { --cat-color: #a9782f; --cat-light: #8a5f18; --cat-glow: rgba(169, 120, 47, 0.28); }
+.cat-character    { --cat-color: #6b4ba1; --cat-light: #56398a; --cat-glow: rgba(107, 75, 161, 0.28); }
+.cat-organization { --cat-color: #9c3b4f; --cat-light: #7d2c3d; --cat-glow: rgba(156, 59, 79, 0.28); }
+.cat-location     { --cat-color: #1f7a72; --cat-light: #145f58; --cat-glow: rgba(31, 122, 114, 0.28); }
+.cat-item         { --cat-color: #a8611f; --cat-light: #8a4d16; --cat-glow: rgba(168, 97, 31, 0.28); }
+.cat-quest        { --cat-color: #4b4a9c; --cat-light: #38377a; --cat-glow: rgba(75, 74, 156, 0.28); }
+.cat-sessionlog   { --cat-color: #6b5842; --cat-light: #52412f; --cat-glow: rgba(107, 88, 66, 0.28); }
 
 /* ---------- per-class party themes (Player Character roster only) ---------- */
 /* Reuses the same --cat-* properties, so a class-<slug> wrapper re-tints the
    same themed-banner/tag/portrait components used everywhere else — a
-   Ranger's roster card glows woodland green, a Wizard's glows arcane blue. */
-.class-barbarian { --cat-color: #dc2626; --cat-light: #fecaca; --cat-glow: rgba(220, 38, 38, 0.35); }
-.class-bard       { --cat-color: #ec4899; --cat-light: #fbcfe8; --cat-glow: rgba(236, 72, 153, 0.35); }
-.class-cleric     { --cat-color: #fbbf24; --cat-light: #fef9c3; --cat-glow: rgba(251, 191, 36, 0.35); }
-.class-druid      { --cat-color: #65a30d; --cat-light: #d9f99d; --cat-glow: rgba(101, 163, 10, 0.35); }
-.class-fighter    { --cat-color: #64748b; --cat-light: #e2e8f0; --cat-glow: rgba(100, 116, 139, 0.35); }
-.class-monk       { --cat-color: #10b981; --cat-light: #a7f3d0; --cat-glow: rgba(16, 185, 129, 0.35); }
-.class-paladin    { --cat-color: #f59e0b; --cat-light: #fde68a; --cat-glow: rgba(245, 158, 11, 0.35); }
-.class-ranger     { --cat-color: #16a34a; --cat-light: #bbf7d0; --cat-glow: rgba(22, 163, 74, 0.35); }
-.class-rogue      { --cat-color: #6d28d9; --cat-light: #ddd6fe; --cat-glow: rgba(109, 40, 217, 0.35); }
-.class-sorcerer   { --cat-color: #d946ef; --cat-light: #f5d0fe; --cat-glow: rgba(217, 70, 239, 0.35); }
-.class-warlock    { --cat-color: #a21caf; --cat-light: #f0abfc; --cat-glow: rgba(162, 28, 175, 0.35); }
-.class-wizard     { --cat-color: #3b82f6; --cat-light: #bfdbfe; --cat-glow: rgba(59, 130, 246, 0.35); }
+   Ranger's roster card reads woodland green ink, a Wizard's deep royal blue. */
+.class-barbarian { --cat-color: #9c3324; --cat-light: #7d2819; --cat-glow: rgba(156, 51, 36, 0.28); }
+.class-bard       { --cat-color: #9c3f74; --cat-light: #7d3260; --cat-glow: rgba(156, 63, 116, 0.28); }
+.class-cleric     { --cat-color: #a6821f; --cat-light: #87700f; --cat-glow: rgba(166, 130, 31, 0.28); }
+.class-druid      { --cat-color: #6b7d1f; --cat-light: #55620f; --cat-glow: rgba(107, 125, 31, 0.28); }
+.class-fighter    { --cat-color: #5c6670; --cat-light: #454d55; --cat-glow: rgba(92, 102, 112, 0.28); }
+.class-monk       { --cat-color: #1f7d5c; --cat-light: #165f46; --cat-glow: rgba(31, 125, 92, 0.28); }
+.class-paladin    { --cat-color: #b0791f; --cat-light: #8c5f18; --cat-glow: rgba(176, 121, 31, 0.28); }
+.class-ranger     { --cat-color: #3f6b3f; --cat-light: #2f522f; --cat-glow: rgba(63, 107, 63, 0.28); }
+.class-rogue      { --cat-color: #5c2d82; --cat-light: #451f63; --cat-glow: rgba(92, 45, 130, 0.28); }
+.class-sorcerer   { --cat-color: #9c2d8c; --cat-light: #7a2270; --cat-glow: rgba(156, 45, 140, 0.28); }
+.class-warlock    { --cat-color: #6b1f7d; --cat-light: #521861; --cat-glow: rgba(107, 31, 125, 0.28); }
+.class-wizard     { --cat-color: #2f4f8c; --cat-light: #23396b; --cat-glow: rgba(47, 79, 140, 0.28); }
 
 .cat-icon { width: 1.1em; height: 1.1em; vertical-align: -0.2em; margin-right: 0.4em; filter: drop-shadow(0 0 3px var(--cat-glow)); }
 .cat-icon-lg { width: 52px; height: 52px; flex-shrink: 0; filter: drop-shadow(0 0 10px var(--cat-glow)); }
 
-/* A starry, glowing banner used to frame a themed page's header. */
+/* A softly glowing banner, spattered with small ink-dots, used to frame a
+   themed page's header — like the illuminated band across the top of a
+   manuscript page. */
 .themed-banner {
   position: relative;
   padding: 1.5rem 1.75rem;
@@ -81,10 +88,10 @@
     radial-gradient(1.3px 1.3px at 92% 55%, var(--cat-light) 60%, transparent 61%),
     radial-gradient(1.5px 1.5px at 32% 85%, var(--cat-light) 60%, transparent 61%),
     radial-gradient(1.3px 1.3px at 45% 15%, var(--cat-light) 60%, transparent 61%);
-  box-shadow: 0 0 30px var(--cat-glow), inset 0 0 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 24px var(--cat-glow), inset 0 0 40px rgba(107, 88, 66, 0.15);
 }
 .themed-banner .page-header { margin-bottom: 0; }
-.themed-banner h1 { text-shadow: 0 0 18px var(--cat-glow); }
+.themed-banner h1 { text-shadow: 0 0 14px var(--cat-glow); }
 .themed-header-title { display: flex; align-items: center; gap: 0.15rem; flex-wrap: wrap; }
 
 * { box-sizing: border-box; }
@@ -93,10 +100,13 @@ body {
   margin: 0;
   font-family: var(--font-body);
   font-size: 1.08rem;
-  background:
-    radial-gradient(circle at 15% 10%, rgba(91,155,213,0.05), transparent 40%),
-    radial-gradient(circle at 85% 90%, rgba(91,155,213,0.04), transparent 45%),
-    var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 250, 235, 0.35), transparent 60%),
+    radial-gradient(ellipse at 50% 100%, rgba(60, 42, 25, 0.14), transparent 60%),
+    url("paper-texture.jpg");
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-size: 100% 100%, 100% 100%, 512px 512px;
   color: var(--text);
   line-height: 1.65;
 }
@@ -107,7 +117,7 @@ a:hover { text-decoration: underline; }
 h1, h2, h3, h4 { font-family: var(--font-heading); letter-spacing: 0.02em; }
 
 code {
-  background: rgba(255,255,255,0.08);
+  background: rgba(60, 42, 25, 0.08);
   padding: 0.1em 0.4em;
   border-radius: 4px;
   font-size: 0.9em;
@@ -162,9 +172,9 @@ code {
 
 .site-header {
   background: linear-gradient(180deg, var(--bg-panel), var(--bg));
-  border-bottom: 2px solid var(--border);
+  border-bottom: 3px double var(--border);
   padding: 1.25rem 1.5rem 0;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  box-shadow: 0 4px 18px rgba(60, 42, 25, 0.25);
 }
 
 .header-inner {
@@ -191,9 +201,9 @@ code {
 .brand-text {
   font-family: var(--font-display);
   font-size: 1.5rem;
-  color: var(--accent-bright);
+  color: var(--accent-deep);
   line-height: 1.1;
-  text-shadow: 0 1px 6px rgba(91,155,213,0.25);
+  text-shadow: 0 1px 3px rgba(169, 120, 47, 0.2);
 }
 
 .search-form {
@@ -226,13 +236,13 @@ code {
 
 .new-entry-btn {
   background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  color: #12171c;
+  color: #2c1e14;
   padding: 0.5rem 1.1rem;
   border-radius: var(--radius);
   font-weight: bold;
   font-family: var(--font-heading);
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  box-shadow: 0 2px 6px rgba(60, 42, 25, 0.3);
 }
 .new-entry-btn:hover { filter: brightness(1.08); text-decoration: none; }
 
@@ -274,7 +284,7 @@ code {
 .hero h1 {
   font-family: var(--font-display);
   font-size: 2.1rem;
-  color: var(--accent-bright);
+  color: var(--accent-deep);
   margin-bottom: 0.5rem;
 }
 .hero p { color: var(--text-muted); max-width: 55ch; margin: 0 auto; }
@@ -401,17 +411,23 @@ code {
   display: block;
 }
 
+/* The entry write-up itself is deliberately treated as its own "page" laid
+   into the surrounding site chrome -- a subtle vellum grain (blended rather
+   than just a flat fill), a colored illuminated drop-cap on the first
+   paragraph, and its own ink color -- so the part of the site that's most
+   directly the party's own writing is the part that reads most like an
+   actual journal page. */
 .entry-body {
   position: relative;
-  background:
-    linear-gradient(160deg, rgba(255,255,255,0.02), transparent 40%),
-    var(--parchment);
+  background-color: var(--parchment);
+  background-image: url("vellum-texture.jpg");
+  background-blend-mode: multiply;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 2rem 2.25rem;
   margin-bottom: 2rem;
   color: var(--ink);
-  box-shadow: inset 0 0 40px rgba(35,45,55,0.1), 0 6px 20px rgba(0,0,0,0.3);
+  box-shadow: inset 0 0 40px rgba(107, 88, 66, 0.1), 0 6px 18px rgba(60, 42, 25, 0.2);
 }
 .entry-body h1, .entry-body h2, .entry-body h3 { color: var(--ink); font-family: var(--font-heading); }
 .entry-body p { margin: 0 0 1rem; }
@@ -425,7 +441,7 @@ code {
 }
 .entry-body table { border-collapse: collapse; width: 100%; }
 .entry-body th, .entry-body td { border: 1px solid var(--ink-muted); padding: 0.4rem 0.6rem; }
-.entry-body a.wiki-link { color: #2f6fb0; }
+.entry-body a.wiki-link { color: var(--link); }
 .entry-body a.wiki-link-missing { color: #a1462f; }
 
 .wiki-link { border-bottom: 1px dotted currentColor; }
@@ -454,13 +470,21 @@ code {
   font-weight: normal;
   margin-bottom: 0.6rem;
 }
+
+/* Ledger-style tables: a solid colored-ink header bar (like a rubricated
+   section heading in an old ledger), fine sepia rules between rows instead
+   of a flat modern grid, and a faint alternating tint down the body rows
+   so a long roster or item list stays easy to track by eye. Old-style
+   (lowercase-height) figures on any numeric columns to match the rest of
+   the page's manuscript feel. */
 .related-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-soft);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  font-variant-numeric: oldstyle-nums;
 }
 .related-table th, .related-table td {
   text-align: left;
@@ -472,10 +496,12 @@ code {
   font-weight: normal;
   font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  background: var(--bg-card);
+  letter-spacing: 0.06em;
+  color: var(--parchment);
+  background: var(--cat-color);
+  border-bottom: 2px solid var(--border);
 }
+.related-table tbody tr:nth-child(even) { background: rgba(107, 88, 66, 0.05); }
 .related-table td:first-child { font-weight: bold; white-space: nowrap; }
 .related-table tr:last-child td { border-bottom: none; }
 .related-table td { color: var(--text-muted); }
@@ -493,11 +519,12 @@ code {
   cursor: pointer;
   font-family: var(--font-heading);
   font-size: 0.92rem;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 1px 3px rgba(60, 42, 25, 0.15);
 }
 .btn:hover { border-color: var(--accent); text-decoration: none; }
-.btn-primary { background: linear-gradient(180deg, var(--accent-bright), var(--accent)); color: #12171c; font-weight: bold; border-color: var(--accent); }
-.btn-primary:hover { filter: brightness(1.08); }
-.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-primary { background: linear-gradient(180deg, var(--accent-bright), var(--accent)); color: #2c1e14; font-weight: bold; border-color: var(--accent); }
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-danger { background: var(--danger); color: #f7f0db; border-color: var(--danger); }
 .btn-danger:hover { background: var(--danger-hover); }
 
 .entry-form { display: flex; flex-direction: column; gap: 1.1rem; max-width: 700px; }
@@ -508,7 +535,7 @@ code {
   padding: 0.9rem 1rem;
   border: 1px dashed var(--border-soft);
   border-radius: var(--radius);
-  background: rgba(91,155,213,0.04);
+  background: rgba(169, 120, 47, 0.06);
 }
 .entry-form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: bold; font-family: var(--font-heading); }
 .entry-form .hint { font-weight: normal; color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-body); }
@@ -526,6 +553,14 @@ code {
 .current-image { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
 .current-image img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 .form-actions { display: flex; gap: 0.75rem; }
+
+.form-error {
+  background: rgba(140, 58, 46, 0.1);
+  border: 1px solid var(--danger);
+  color: #6b1f16;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+}
 
 /* ---------- city view ---------- */
 
@@ -584,7 +619,7 @@ code {
   background-image:
     radial-gradient(circle at 20% 15%, var(--cat-glow), transparent 55%),
     radial-gradient(circle at 85% 85%, var(--cat-glow), transparent 55%);
-  box-shadow: 0 0 24px var(--cat-glow), inset 0 0 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 20px var(--cat-glow), inset 0 0 30px rgba(107, 88, 66, 0.12);
 }
 
 .roster-slot-num {
@@ -608,7 +643,7 @@ code {
 }
 .roster-portrait-placeholder { object-fit: contain; padding: 24px; background: var(--bg-card); }
 
-.roster-name { margin: 0 0 0.15rem; font-family: var(--font-display); font-size: 1.15rem; text-shadow: 0 0 12px var(--cat-glow); }
+.roster-name { margin: 0 0 0.15rem; font-family: var(--font-display); font-size: 1.15rem; text-shadow: 0 0 10px var(--cat-glow); }
 .roster-name a { color: var(--cat-light); }
 .roster-player { margin: 0 0 0.6rem; color: var(--text-muted); font-family: var(--font-heading); font-size: 0.85rem; }
 .roster-build { margin: 0 0 0.9rem; font-family: var(--font-heading); }
@@ -663,14 +698,6 @@ code {
   color: var(--text);
 }
 
-.form-error {
-  background: rgba(168,67,58,0.15);
-  border: 1px solid var(--danger);
-  color: #f3c7c2;
-  padding: 0.7rem 1rem;
-  border-radius: var(--radius);
-}
-
 /* ---------- loot tracker ---------- */
 
 .loot-total {
@@ -680,8 +707,8 @@ code {
   padding: 1rem 1.25rem;
   border: 1px solid var(--cat-color);
   border-radius: var(--radius);
-  background: rgba(251, 146, 60, 0.08);
-  box-shadow: 0 0 16px var(--cat-glow);
+  background: rgba(168, 97, 31, 0.08);
+  box-shadow: 0 0 14px var(--cat-glow);
   margin-bottom: 1.5rem;
 }
 .loot-total-label {
@@ -698,7 +725,7 @@ code {
 /* Items that have been sold/given away/used/destroyed/lost still show up
    for the record, but visually recede -- they're history, not part of the
    current gold total above them. */
-.loot-row-history { opacity: 0.55; }
+.loot-row-history { opacity: 0.6; }
 .loot-row-history td { text-decoration: line-through; text-decoration-color: var(--text-muted); }
 
 /* ---------- timeline ---------- */
@@ -828,11 +855,13 @@ code {
   pointer-events: auto;
 }
 /* A city's Disposition (set on the City entry itself) recolors its pin --
-   Friendly glows the same blue as the Wizard party theme, Hostile the same
+   Friendly reads the same blue as the Wizard party theme, Hostile the same
    red as the Barbarian theme, and Neutral/unset just keeps the default gold
-   .cat-city color inherited from the .map-pins wrapper. */
-.map-pin.pin-friendly { --cat-color: #3b82f6; --cat-light: #bfdbfe; --cat-glow: rgba(59, 130, 246, 0.45); }
-.map-pin.pin-hostile { --cat-color: #dc2626; --cat-light: #fecaca; --cat-glow: rgba(220, 38, 38, 0.45); }
+   .cat-city color inherited from the .map-pins wrapper. Pins stay a bit more
+   saturated than the rest of the ink palette on purpose -- they need to pop
+   against whatever art the party's uploaded map happens to use. */
+.map-pin.pin-friendly { --cat-color: #3b6ea8; --cat-light: #2a4f7a; --cat-glow: rgba(59, 110, 168, 0.45); }
+.map-pin.pin-hostile { --cat-color: #b33224; --cat-light: #8a2519; --cat-glow: rgba(179, 50, 36, 0.45); }
 .map-pin-dot {
   display: block;
   width: 18px;
@@ -840,7 +869,7 @@ code {
   border-radius: 50%;
   background: var(--cat-color);
   border: 2px solid var(--parchment);
-  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(44, 30, 20, 0.45);
   cursor: pointer;
 }
 .map-pin-dot:hover { filter: brightness(1.15); }
@@ -860,7 +889,7 @@ code {
   border-radius: 50%;
   background: var(--cat-color);
   border: 2px solid var(--parchment);
-  box-shadow: 0 0 8px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 8px 2px var(--cat-glow), 0 0 0 2px rgba(44, 30, 20, 0.45);
   cursor: pointer;
   font-size: 9px;
   line-height: 1;
@@ -879,7 +908,7 @@ code {
   height: 13px;
   background: var(--cat-color);
   border: 2px solid var(--parchment);
-  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(44, 30, 20, 0.45);
   cursor: pointer;
   transform: rotate(45deg);
 }
@@ -948,26 +977,26 @@ code {
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-deep);
   margin-top: 0.3rem;
 }
 .map-pin-discovered-form { margin-top: 0.3rem; }
 .map-pin-toggle-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-size: 0.78rem;
   font-family: var(--font-heading);
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
 }
-.map-pin-toggle-btn:hover { color: var(--accent-bright); }
+.map-pin-toggle-btn:hover { color: var(--accent-hover); }
 
 .dm-mode-form { display: contents; }
 .btn-dm-active {
   background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  color: #12171c;
+  color: #2c1e14;
   font-weight: bold;
   border-color: var(--accent);
 }
@@ -988,7 +1017,7 @@ code {
   padding: 0.9rem 1rem;
   border: 1px dashed var(--border-soft);
   border-radius: var(--radius);
-  background: rgba(244, 185, 66, 0.06);
+  background: rgba(169, 120, 47, 0.06);
 }
 .map-pin-form label {
   display: flex;
@@ -1080,9 +1109,9 @@ code {
 .map-pin-submap-link {
   display: block;
   margin-top: 0.35rem;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-family: var(--font-heading);
   font-size: 0.8rem;
   text-decoration: underline;
 }
-.map-pin-submap-link:hover { color: var(--accent-bright); }
+.map-pin-submap-link:hover { color: var(--accent-hover); }
