@@ -1486,6 +1486,84 @@ code {
 }
 .map-notable-item.map-notable-undiscovered { opacity: 0.6; }
 
+/* ---------- Map: wooden tabletop theme ---------- */
+/* The rest of the page (heading, map switcher, pin-placement controls and
+   forms, DM Mode banner) is left on the site's normal parchment background
+   -- those are all working controls read against the usual light-on-dark-ink
+   contrast the whole app assumes. Only the actual map viewport + its
+   sidebar -- the part you're meant to feel like you're looking DOWN AT --
+   sits on a dedicated wood-grain "table" surface (.table-surface below),
+   with the map itself styled as a paper map lying on top of it and the
+   Legend/Notable Locations panels as loose note cards someone dropped
+   beside it, each taped down at a slightly different angle. Both already
+   have their own opaque light background (map-page-wrap/map-sidebar-panel),
+   so nothing about their own text contrast changes -- only the surface
+   underneath them and the "physical object" framing around them. */
+
+.table-surface {
+  padding: 2rem 1.75rem;
+  border-radius: 14px;
+  background-color: #5c3d24;
+  background-image:
+    /* soft glow overhead, like a lamp hanging over the table */
+    radial-gradient(ellipse 70% 55% at 50% 8%, rgba(255, 214, 160, 0.16), transparent 65%),
+    /* fine wood grain */
+    repeating-linear-gradient(90deg, rgba(255, 214, 160, 0.045) 0px, rgba(255, 214, 160, 0.045) 1px, transparent 1px, transparent 5px),
+    /* plank seams */
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0px, rgba(0, 0, 0, 0.18) 2px, transparent 2px, transparent 172px),
+    /* darker toward the outer edges, like the table fades into shadow */
+    radial-gradient(ellipse 120% 120% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.25) 100%),
+    linear-gradient(180deg, #6b4a2c, #4a2f1a);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 0 60px rgba(0, 0, 0, 0.3);
+}
+
+/* The map itself, lying flat on the table like a printed/hand-drawn paper
+   map -- a heavier, warmer shadow than .ornate-frame normally gets (as if
+   lifted slightly off the wood) and a cream deckle-ish edge instead of the
+   thin gold hairline used elsewhere in the app. */
+.theme-map-table .map-frame {
+  background: var(--parchment);
+  border-radius: 3px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 2px 0 rgba(255, 255, 255, 0.4) inset;
+}
+.theme-map-table .map-page-wrap {
+  border-color: var(--border-soft);
+}
+
+/* Legend + Notable Locations read as two separate note cards someone set
+   down beside the map, not a matched pair of panels -- independent tilt,
+   a "washi tape" strip pinning each one down, and a firmer drop shadow
+   than a normal sidebar panel gets so they visibly sit above the wood. */
+.theme-map-table .map-sidebar-panel {
+  position: relative;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+.theme-map-table .map-sidebar-panel:hover { transform: translateY(-2px) rotate(0deg) !important; }
+.theme-map-table .map-sidebar-panel:nth-of-type(1) { transform: rotate(-1.1deg); }
+.theme-map-table .map-sidebar-panel:nth-of-type(2) { transform: rotate(0.9deg); }
+.theme-map-table .map-sidebar-panel::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 64px;
+  height: 22px;
+  transform: translateX(-50%) rotate(-2deg);
+  background: rgba(169, 120, 47, 0.35);
+  border: 1px solid rgba(169, 120, 47, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* A subtle "tool tray" feel for the zoom/pin/DM Mode buttons, without
+   touching their contrast -- .btn is already opaque, so this just warms
+   the border/shadow to feel more like wood-and-brass tools than the site's
+   usual gold-leaf button. */
+.theme-map-table .map-controls .btn {
+  border-color: #8a6a3f;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 2px 4px rgba(60, 42, 25, 0.25);
+}
+
 /* ---------- Reference page (/reference) ---------- */
 /* Quick-lookup cards for Species and Classes, styled like a lighter, more
    text-heavy cousin of the homepage's .category-card grid -- these aren't

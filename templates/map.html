@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ current_map.name if current_map else 'Maps' }} — Ascension Campaign Codex{% endblock %}
+{% block page_class %}theme-map-table{% endblock %}
 {% block content %}
 <section class="hero">
   <span class="hero-tagline">The Ascension Campaign</span>
@@ -174,6 +175,7 @@
     {% endif %}
   {% endif %}
 
+  <div class="table-surface">
   <div class="map-layout">
   <div class="map-frame ornate-frame">
     <span class="corner-bl"></span><span class="corner-br"></span>
@@ -324,6 +326,7 @@
       {% endif %}
     </div>
   </aside>
+  </div>
   </div>
 
   <div class="divider"><span class="divider-mark"></span></div>
