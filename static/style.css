@@ -716,6 +716,118 @@ code {
   margin-bottom: 1rem;
 }
 
+.map-inner {
+  position: relative;
+  display: inline-block;
+}
+.map-inner.pin-placing,
+.map-inner.pin-placing #mapImage {
+  cursor: crosshair;
+}
+
+/* Overlay sits on top of the map image and matches its box exactly (.map-inner
+   is display:inline-block, so it's always sized to the image, at any zoom
+   level) -- pins are positioned as a percentage of that box, so they stay put
+   on the right spot regardless of zoom or scroll. pointer-events is off on
+   the overlay itself so clicks fall through to the map underneath (for pin
+   placement) and only re-enabled on each individual pin. */
+.map-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.map-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+.map-pin-dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--cat-color);
+  border: 2px solid var(--parchment);
+  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+.map-pin-dot:hover { filter: brightness(1.15); }
+.map-pin-dot-ghost {
+  background: transparent;
+  border: 2px dashed var(--cat-color);
+  box-shadow: none;
+  cursor: default;
+}
+.map-pin-ghost { pointer-events: none; }
+
+.map-pin-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 170px;
+  background: var(--bg-card);
+  border: 1px solid var(--cat-color);
+  border-radius: var(--radius);
+  box-shadow: 0 0 16px var(--cat-glow);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 20;
+}
+.map-pin:hover .map-pin-tooltip { opacity: 1; visibility: visible; }
+.map-pin-tooltip strong {
+  display: block;
+  font-family: var(--font-heading);
+  color: var(--cat-light);
+  margin-bottom: 0.15rem;
+}
+.map-pin-tooltip span { display: block; color: var(--text-muted); }
+.map-pin-delete-form { margin-top: 0.4rem; }
+.map-pin-delete-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.map-pin-delete-btn:hover { color: var(--danger-hover); }
+
+.map-pin-form {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius);
+  background: rgba(244, 185, 66, 0.06);
+}
+.map-pin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: bold;
+  font-family: var(--font-heading);
+}
+.map-pin-form select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
 .site-footer {
   text-align: center;
   color: var(--text-muted);

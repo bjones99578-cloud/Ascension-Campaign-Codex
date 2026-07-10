@@ -10,15 +10,65 @@
     <button type="button" class="btn" onclick="mapZoom(-20)">− Zoom Out</button>
     <button type="button" class="btn" onclick="mapZoom(0, true)">Reset</button>
     <button type="button" class="btn" onclick="mapZoom(20)">+ Zoom In</button>
+    <button type="button" class="btn" id="pinModeToggle">📍 Add City Pin</button>
   </div>
+
+  {% if not city_options %}
+    <p class="empty-state">
+      Create a City entry first, then come back here to pin it on the map.
+    </p>
+  {% else %}
+    <p class="empty-state" id="pinModeHint" style="display:none;">
+      Click anywhere on the map to drop a pin there, then choose which city it is.
+    </p>
+
+    <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="pinForm" style="display:none;">
+      <input type="hidden" name="x" id="pinFormX">
+      <input type="hidden" name="y" id="pinFormY">
+      <label>
+        Which city is this?
+        <select name="entry_id" required>
+          <option value="">— Choose a city —</option>
+          {% for city in city_options %}
+            <option value="{{ city['id'] }}">{{ city['name'] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">Place Pin</button>
+      <button type="button" class="btn" id="pinFormCancel">Cancel</button>
+    </form>
+  {% endif %}
+
   <div class="map-page-wrap" id="mapWrap">
-    <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
+    <div class="map-inner" id="mapInner">
+      <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
+      <div class="map-pins cat-city" id="mapPins">
+        {% for pin in pins %}
+          <div class="map-pin" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
+            <a class="map-pin-dot" href="{{ url_for('city_view', city_id=pin.entry_id) }}"
+               aria-label="Open {{ pin.city_name }} in City View"></a>
+            <div class="map-pin-tooltip">
+              <strong>{{ pin.city_name }}</strong>
+              {% if pin.region_name %}<span>{{ pin.region_name }}</span>{% endif %}
+              <span>{{ pin.settlement_size or 'Settlement size unknown' }}{% if pin.population %} · Pop. {{ pin.population }}{% endif %}</span>
+              <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
+                    onsubmit="return confirm('Remove this pin from the map? The {{ pin.city_name }} entry itself is kept.');">
+                <button type="submit" class="map-pin-delete-btn">Remove pin</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+        <div class="map-pin map-pin-ghost" id="mapPinGhost" style="display:none;">
+          <span class="map-pin-dot map-pin-dot-ghost"></span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="divider"><span class="divider-mark"></span></div>
 
   <h2>Replace the map</h2>
-  <p class="empty-state">Uploading a new image here replaces the current map for everyone.</p>
+  <p class="empty-state">Uploading a new image here replaces the current map for everyone. Existing city pins are kept — re-check their placement against the new image afterward.</p>
 {% else %}
   <p class="empty-state">No map has been uploaded yet. Add your hand-drawn world map below so the whole party can browse it.</p>
 {% endif %}
@@ -42,6 +92,63 @@
       scale = reset ? 100 : Math.max(40, Math.min(300, scale + delta));
       img.style.width = scale + '%';
     };
+  })();
+
+  (function () {
+    var toggleBtn = document.getElementById('pinModeToggle');
+    var img = document.getElementById('mapImage');
+    var mapInner = document.getElementById('mapInner');
+    var hint = document.getElementById('pinModeHint');
+    var form = document.getElementById('pinForm');
+    var cancelBtn = document.getElementById('pinFormCancel');
+    var ghost = document.getElementById('mapPinGhost');
+    var xField = document.getElementById('pinFormX');
+    var yField = document.getElementById('pinFormY');
+    if (!toggleBtn || !img || !mapInner) return;
+
+    var placing = false;
+
+    function setPlacing(next) {
+      placing = next;
+      mapInner.classList.toggle('pin-placing', placing);
+      if (hint) hint.style.display = placing ? '' : 'none';
+      toggleBtn.textContent = placing ? 'Cancel Adding Pin' : '📍 Add City Pin';
+      if (!placing) {
+        if (form) form.style.display = 'none';
+        if (ghost) ghost.style.display = 'none';
+      }
+    }
+
+    toggleBtn.addEventListener('click', function () {
+      setPlacing(!placing);
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        setPlacing(false);
+      });
+    }
+
+    mapInner.addEventListener('click', function (e) {
+      if (!placing) return;
+      if (e.target.closest('.map-pin') && !e.target.closest('.map-pin-ghost')) return; // don't re-place on top of an existing pin
+      var rect = img.getBoundingClientRect();
+      var xPct = ((e.clientX - rect.left) / rect.width) * 100;
+      var yPct = ((e.clientY - rect.top) / rect.height) * 100;
+      xPct = Math.max(0, Math.min(100, xPct));
+      yPct = Math.max(0, Math.min(100, yPct));
+      if (xField) xField.value = xPct.toFixed(2);
+      if (yField) yField.value = yPct.toFixed(2);
+      if (ghost) {
+        ghost.style.left = xPct + '%';
+        ghost.style.top = yPct + '%';
+        ghost.style.display = '';
+      }
+      if (form) {
+        form.style.display = '';
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
   })();
 </script>
 {% endblock %}

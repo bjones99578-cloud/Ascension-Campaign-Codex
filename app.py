@@ -600,7 +600,11 @@ def party_unassign():
 def map_view():
     conn = get_conn()
     map_filename = models.get_setting(conn, "map_filename")
-    return render_template("map.html", map_filename=map_filename)
+    pins = models.get_map_pins(conn)
+    city_options = models.list_entries(conn, category="City")
+    return render_template(
+        "map.html", map_filename=map_filename, pins=pins, city_options=city_options
+    )
 
 
 @app.route("/map/upload", methods=["POST"])
@@ -612,6 +616,32 @@ def map_upload():
         if old_filename:
             images.delete_upload(old_filename)
         models.set_setting(conn, "map_filename", new_filename)
+    return redirect(url_for("map_view"))
+
+
+@app.route("/map/pins", methods=["POST"])
+def map_pin_add():
+    """Drop a new pin on the world map at a clicked point (x/y as a percentage
+    of the image's own width/height, so it stays put across zoom levels), for
+    a City the map-viewer clicked on directly. Silently no-ops on bad input
+    (out-of-range coordinates, or a target that isn't actually a City) rather
+    than erroring, since this is only ever hit from the map page's own click-
+    to-place control, never a user-facing form that needs field-level errors."""
+    conn = get_conn()
+    entry_id = request.form.get("entry_id", type=int)
+    x = request.form.get("x", type=float)
+    y = request.form.get("y", type=float)
+    if entry_id and x is not None and y is not None and 0 <= x <= 100 and 0 <= y <= 100:
+        city = models.get_entry(conn, entry_id)
+        if city and city["category"] == "City":
+            models.add_map_pin(conn, entry_id, x, y)
+    return redirect(url_for("map_view"))
+
+
+@app.route("/map/pins/<int:pin_id>/delete", methods=["POST"])
+def map_pin_delete(pin_id):
+    conn = get_conn()
+    models.delete_map_pin(conn, pin_id)
     return redirect(url_for("map_view"))
 
 

@@ -318,10 +318,19 @@ def init_db():
             UNIQUE (field_name, value)
         );
 
+        CREATE TABLE IF NOT EXISTS map_pin (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
+            x REAL NOT NULL,
+            y REAL NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_link_source ON link (source_id);
         CREATE INDEX IF NOT EXISTS idx_link_target ON link (target_id);
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
         CREATE INDEX IF NOT EXISTS idx_custom_option_field ON custom_option (field_name);
+        CREATE INDEX IF NOT EXISTS idx_map_pin_entry ON map_pin (entry_id);
         """
     )
     # Lightweight migrations for databases created before these columns existed.
@@ -499,6 +508,37 @@ def get_cities_in_region(conn, region_id):
         "WHERE category = 'City' AND region_id = ? ORDER BY name COLLATE NOCASE ASC",
         (region_id,),
     ).fetchall()
+
+
+def get_map_pins(conn):
+    """Every pin on the shared world map, joined with just enough of its
+    City's own fields to render a clickable marker and a "very basic
+    information" hover tooltip without a second query per pin."""
+    return conn.execute(
+        """
+        SELECT map_pin.id AS pin_id, map_pin.x AS x, map_pin.y AS y, map_pin.entry_id AS entry_id,
+               city.name AS city_name, city.settlement_size AS settlement_size,
+               city.population AS population, region.name AS region_name
+        FROM map_pin
+        JOIN entry city ON city.id = map_pin.entry_id
+        LEFT JOIN entry region ON region.id = city.region_id
+        ORDER BY map_pin.id ASC
+        """
+    ).fetchall()
+
+
+def add_map_pin(conn, entry_id, x, y):
+    cur = conn.execute(
+        "INSERT INTO map_pin (entry_id, x, y, created_at) VALUES (?, ?, ?, ?)",
+        (entry_id, x, y, now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def delete_map_pin(conn, pin_id):
+    conn.execute("DELETE FROM map_pin WHERE id = ?", (pin_id,))
+    conn.commit()
 
 
 def get_player_characters(conn):

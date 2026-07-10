@@ -99,6 +99,14 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
 - **World Map**: the "Map" link in the nav holds a single shared map image
   (great for a hand-drawn world map) with zoom in/out controls and scrolling
   to pan around it. Uploading a new map there replaces it for everyone.
+  - **City pins**: click "📍 Add City Pin", then click anywhere on the map —
+    a marker drops right where you clicked and you just pick which City
+    entry it is. From then on that pin is a clickable hotspot: click it to
+    jump straight to that city's Dynamic City View, or just hover over it for
+    a quick glance at its Region, Settlement Size, and Population without
+    leaving the map. Pins stay put on the same spot no matter how far you
+    zoom in or out. Hover a pin and use "Remove pin" to unpin it (the City
+    entry itself is untouched — it just comes off the map).
 - **Relationship tables**: every City entry automatically grows Characters /
   Notable Factions / Missions & Quests tables (from the Home City /
   Headquarters City dropdowns and from other entries linking to it with
