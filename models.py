@@ -384,14 +384,24 @@ def init_db():
             UNIQUE (field_name, value)
         );
 
+        CREATE TABLE IF NOT EXISTS game_map (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            filename TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS map_pin (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            map_id INTEGER REFERENCES game_map (id) ON DELETE CASCADE,
             entry_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
             x REAL NOT NULL,
             y REAL NOT NULL,
             symbol TEXT,
             color TEXT,
             discovered INTEGER NOT NULL DEFAULT 1,
+            target_map_id INTEGER REFERENCES game_map (id) ON DELETE SET NULL,
             created_at TEXT NOT NULL
         );
 
@@ -432,7 +442,40 @@ def init_db():
         # visible on the map -- so they migrate in as discovered (1), not
         # hidden, to avoid retroactively fogging out a party's existing map.
         conn.execute("ALTER TABLE map_pin ADD COLUMN discovered INTEGER NOT NULL DEFAULT 1")
+    if "map_id" not in existing_pin_cols:
+        conn.execute("ALTER TABLE map_pin ADD COLUMN map_id INTEGER REFERENCES game_map (id) ON DELETE CASCADE")
+    if "target_map_id" not in existing_pin_cols:
+        # Optional drilldown: a pin can point at a more detailed map (e.g. a
+        # City pin on the World Map linking to that city's own street-level
+        # map) so clicking it can offer to jump straight there. Not every pin
+        # uses this -- NULL just means "no sub-map for this one".
+        conn.execute("ALTER TABLE map_pin ADD COLUMN target_map_id INTEGER REFERENCES game_map (id) ON DELETE SET NULL")
+    # Only safe to index map_id once the column above is guaranteed to exist --
+    # on a pre-multi-map database this ALTER TABLE (not the initial
+    # CREATE TABLE IF NOT EXISTS, which no-ops against an existing table) is
+    # what actually adds it, so this index creation must come after it.
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_map_pin_map ON map_pin (map_id)")
     conn.commit()
+
+    # One-time backfill for databases from before multi-map support: they have
+    # a single map image stored under the "map_filename" setting and pins with
+    # no map_id yet. Migrate that legacy single map into a real game_map row
+    # (named "World Map" so it reads naturally as the first entry in the new
+    # map picker) and point every orphaned pin at it, so nobody's existing map
+    # or pins silently vanish when this update lands.
+    if conn.execute("SELECT COUNT(*) AS n FROM game_map").fetchone()["n"] == 0:
+        legacy_filename = get_setting(conn, "map_filename")
+        orphaned_pins = conn.execute(
+            "SELECT COUNT(*) AS n FROM map_pin WHERE map_id IS NULL"
+        ).fetchone()["n"]
+        if legacy_filename or orphaned_pins:
+            cur = conn.execute(
+                "INSERT INTO game_map (name, filename, sort_order, created_at) VALUES (?, ?, ?, ?)",
+                ("World Map", legacy_filename, 0, now_iso()),
+            )
+            legacy_map_id = cur.lastrowid
+            conn.execute("UPDATE map_pin SET map_id = ? WHERE map_id IS NULL", (legacy_map_id,))
+            conn.commit()
     conn.close()
 
 
@@ -650,10 +693,59 @@ DEFAULT_CHARACTER_PIN_SYMBOL = "★"
 DEFAULT_CHARACTER_PIN_COLOR = "#a78bfa"  # matches the Character category's own violet theme
 
 
-def get_map_pins(conn):
-    """Every pin on the shared world map. Pins can mark a City, a Character,
-    or an Organization -- all three live in the same `entry` table, so one
-    query pulls whatever columns apply to each pin's own category:
+def list_maps(conn):
+    """Every map the party has, in display order -- powers the "Viewing: [...]"
+    picker on the Map page. sort_order defaults to insertion order (each new
+    map is appended at the end); nothing currently lets the party manually
+    reorder maps, so this is effectively "oldest/most-important first"."""
+    return conn.execute(
+        "SELECT * FROM game_map ORDER BY sort_order ASC, name COLLATE NOCASE ASC"
+    ).fetchall()
+
+
+def get_map(conn, map_id):
+    return conn.execute("SELECT * FROM game_map WHERE id = ?", (map_id,)).fetchone()
+
+
+def create_map(conn, name, filename=None):
+    cur = conn.execute(
+        "INSERT INTO game_map (name, filename, sort_order, created_at) "
+        "VALUES (?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM game_map), ?)",
+        (name.strip(), filename, now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def rename_map(conn, map_id, name):
+    conn.execute("UPDATE game_map SET name = ? WHERE id = ?", (name.strip(), map_id))
+    conn.commit()
+
+
+def set_map_image(conn, map_id, filename):
+    conn.execute("UPDATE game_map SET filename = ? WHERE id = ?", (filename, map_id))
+    conn.commit()
+
+
+def delete_map(conn, map_id):
+    """Deletes a map row. ON DELETE CASCADE takes every pin placed on it down
+    with it, and ON DELETE SET NULL clears target_map_id on any pin elsewhere
+    that drilled down into this map, so removing a sub-map never leaves a
+    dangling "view sub-map" link on some other map's pin. Returns the map's
+    own image filename (or None) so the caller can delete the uploaded file
+    too -- that's the caller's job, matching how clear_entry_image/
+    delete_entry already split "remove the DB row" from "remove the uploaded
+    file" elsewhere in this module."""
+    row = get_map(conn, map_id)
+    conn.execute("DELETE FROM game_map WHERE id = ?", (map_id,))
+    conn.commit()
+    return row["filename"] if row else None
+
+
+def get_map_pins(conn, map_id):
+    """Every pin on one specific map. Pins can mark a City, a Character, or an
+    Organization -- all three live in the same `entry` table, so one query
+    pulls whatever columns apply to each pin's own category:
       - City pins: the city's Leader (or, lacking one, its Leading
         Organization) and its Settlement Size, plus its Disposition, which
         drives the pin's color (Friendly = blue, Hostile = red,
@@ -663,12 +755,18 @@ def get_map_pins(conn):
       - Organization pins: the same Disposition-driven coloring as City
         pins (so a hostile guild's hideout reads red just like a hostile
         city), plus its Leader and Organization Type for the tooltip.
+    Any pin can also optionally carry a target_map_id (an explicit "drill
+    down to this more detailed map" link, e.g. a City pin on the World Map
+    pointing at that city's own street-level map) -- resolved here too so
+    the template can offer a "View sub-map" link without a second query.
     All resolved in one query rather than one round-trip per pin."""
     return conn.execute(
         """
         SELECT map_pin.id AS pin_id, map_pin.x AS x, map_pin.y AS y, map_pin.entry_id AS entry_id,
                map_pin.symbol AS symbol, map_pin.color AS color,
                map_pin.discovered AS discovered,
+               map_pin.target_map_id AS target_map_id,
+               target_map.name AS target_map_name,
                e.name AS entry_name, e.category AS entry_category,
                e.settlement_size AS settlement_size,
                e.disposition AS disposition,
@@ -680,15 +778,19 @@ def get_map_pins(conn):
         JOIN entry e ON e.id = map_pin.entry_id
         LEFT JOIN entry leader ON leader.id = e.leader_id
         LEFT JOIN entry leading_org ON leading_org.id = e.leading_organization_id
+        LEFT JOIN game_map target_map ON target_map.id = map_pin.target_map_id
+        WHERE map_pin.map_id = ?
         ORDER BY map_pin.id ASC
-        """
+        """,
+        (map_id,),
     ).fetchall()
 
 
-def add_map_pin(conn, entry_id, x, y, symbol=None, color=None, discovered=1):
+def add_map_pin(conn, map_id, entry_id, x, y, symbol=None, color=None, discovered=1, target_map_id=None):
     cur = conn.execute(
-        "INSERT INTO map_pin (entry_id, x, y, symbol, color, discovered, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (entry_id, x, y, symbol, color, discovered, now_iso()),
+        "INSERT INTO map_pin (map_id, entry_id, x, y, symbol, color, discovered, target_map_id, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (map_id, entry_id, x, y, symbol, color, discovered, target_map_id, now_iso()),
     )
     conn.commit()
     return cur.lastrowid

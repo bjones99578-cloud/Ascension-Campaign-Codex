@@ -158,9 +158,23 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   name" field on each entry so people can see who wrote or last touched it.
 - **Pictures**: any entry can have an image attached (a character portrait,
   city art, an item illustration) — add one when creating or editing an entry.
-- **World Map**: the "Map" link in the nav holds a single shared map image
-  (great for a hand-drawn world map) with zoom in/out controls and scrolling
-  to pan around it. Uploading a new map there replaces it for everyone.
+- **World Map (multiple maps)**: the "Map" link in the nav holds as many maps
+  as the party needs — a World Map, a city street-map, a dungeon layout,
+  whatever scale is useful — each with its own image and its own independent
+  set of pins. A "Viewing: [...]" picker at the top switches between them,
+  and each has its own **Rename** and **Delete This Map** controls (deleting
+  a map removes its pins too, but never the entries those pins pointed at).
+  "Add a new map" at the bottom of the page creates another one — just give
+  it a name; the image is optional and can be added or replaced anytime from
+  whichever map is currently selected. Every map gets its own zoom in/out
+  controls and click-to-pan.
+  - **Sub-map drilldown**: any pin can optionally link to another map — e.g.
+    a City pin on the World Map pointing at that city's own street-level
+    map. Set this when placing the pin ("Links to sub-map"); if set, hovering
+    the pin shows a "View sub-map: [name] →" link that jumps straight there.
+    Leave it unset for pins that don't need one — not every map uses this.
+    Deleting the target map just clears that link from the pin rather than
+    breaking anything.
   - **City pins**: click "📍 Add City Pin", then click anywhere on the map —
     a marker drops right where you clicked and you just pick which City
     entry it is. From then on that pin is a clickable hotspot: click it to

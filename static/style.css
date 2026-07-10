@@ -1040,3 +1040,49 @@ code {
 }
 .search-filters-form label { min-width: 160px; }
 .search-filters-form .form-actions { align-items: center; }
+
+/* Map page: the "Viewing: [...]" picker, rename form, and delete button all
+   sit in one horizontal row above the map itself -- same compact filter-bar
+   treatment as .search-filters-form, just built from a few separate small
+   forms instead of one big one (each control POSTs/GETs somewhere different). */
+.map-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+.map-switcher-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+.map-switcher label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: bold;
+  font-family: var(--font-heading);
+}
+.map-switcher select,
+.map-switcher input[type="text"] {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+/* A pin's optional "drill down to a more detailed map" link -- styled like
+   the DM-only toggle links so it reads as a secondary action inside the
+   tooltip, not competing with the entry name/stats above it. */
+.map-pin-submap-link {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--accent);
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+.map-pin-submap-link:hover { color: var(--accent-bright); }

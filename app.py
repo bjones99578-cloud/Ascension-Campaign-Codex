@@ -116,8 +116,12 @@ def index():
     recent = conn.execute(
         "SELECT * FROM entry ORDER BY updated_at DESC LIMIT 8"
     ).fetchall()
-    map_filename = models.get_setting(conn, "map_filename")
-    return render_template("index.html", recent=recent, map_filename=map_filename)
+    # The homepage preview always shows whichever map is first in sort_order
+    # -- the same one /map falls back to when no ?map_id= is given -- so
+    # clicking through lands on the map you'd expect from the thumbnail.
+    maps = models.list_maps(conn)
+    preview_map = maps[0] if maps else None
+    return render_template("index.html", recent=recent, preview_map=preview_map)
 
 
 @app.route("/category/<category>")
@@ -846,25 +850,40 @@ def timeline():
 
 @app.route("/map")
 def map_view():
+    """The World Map page is really "whichever map is currently selected" --
+    the party can have any number of maps of varying scale (a World Map, a
+    city street-map, a dungeon layout...), each with its own image and its
+    own independent set of pins. The "Viewing: [...]" dropdown picks which
+    one via ?map_id=; with none specified (or an invalid/deleted id) this
+    falls back to the first map in sort_order, matching how a single
+    /map/upload used to "just work" before multi-map support existed."""
     conn = get_conn()
-    map_filename = models.get_setting(conn, "map_filename")
+    maps = models.list_maps(conn)
+    map_id = request.args.get("map_id", type=int)
+    current_map = models.get_map(conn, map_id) if map_id else None
+    if current_map is None and maps:
+        current_map = maps[0]
+
     dm_mode = session.get("dm_mode", False)
-    all_pins = models.get_map_pins(conn)
-    # Fog of war: with DM Mode off (the default "player view"), pins the DM
-    # hasn't marked as Discovered yet are excluded entirely -- players should
-    # never learn a secret location exists just by noticing an unlabeled dot
-    # on the map. DM Mode shows every pin, with undiscovered ones flagged
-    # visually so the DM can tell at a glance what's still hidden.
-    if dm_mode:
-        pins = all_pins
+    if current_map:
+        all_pins = models.get_map_pins(conn, current_map["id"])
+        # Fog of war: with DM Mode off (the default "player view"), pins the
+        # DM hasn't marked as Discovered yet are excluded entirely -- players
+        # should never learn a secret location exists just by noticing an
+        # unlabeled dot on the map. DM Mode shows every pin, with
+        # undiscovered ones flagged visually so the DM can tell at a glance
+        # what's still hidden.
+        pins = all_pins if dm_mode else [p for p in all_pins if p["discovered"]]
     else:
-        pins = [p for p in all_pins if p["discovered"]]
+        pins = []
+
     city_options = models.list_entries(conn, category="City")
     character_options = models.list_entries(conn, category="Character")
     organization_options = models.list_entries(conn, category="Organization")
     return render_template(
         "map.html",
-        map_filename=map_filename,
+        maps=maps,
+        current_map=current_map,
         pins=pins,
         dm_mode=dm_mode,
         city_options=city_options,
@@ -886,15 +905,51 @@ def dm_mode_toggle():
     return redirect(request.referrer or url_for("map_view"))
 
 
-@app.route("/map/upload", methods=["POST"])
-def map_upload():
+@app.route("/maps/new", methods=["POST"])
+def map_create():
+    """Add a brand-new map -- a name plus an optional starting image (you can
+    always upload/replace the image afterward from the map page itself)."""
     conn = get_conn()
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        return redirect(url_for("map_view"))
+    filename = images.save_upload(request.files.get("image"))
+    map_id = models.create_map(conn, name, filename)
+    return redirect(url_for("map_view", map_id=map_id))
+
+
+@app.route("/maps/<int:map_id>/upload", methods=["POST"])
+def map_upload(map_id):
+    conn = get_conn()
+    current_map = models.get_map(conn, map_id)
+    if current_map is None:
+        return redirect(url_for("map_view"))
     new_filename = images.save_upload(request.files.get("image"))
     if new_filename:
-        old_filename = models.get_setting(conn, "map_filename")
-        if old_filename:
-            images.delete_upload(old_filename)
-        models.set_setting(conn, "map_filename", new_filename)
+        if current_map["filename"]:
+            images.delete_upload(current_map["filename"])
+        models.set_map_image(conn, map_id, new_filename)
+    return redirect(url_for("map_view", map_id=map_id))
+
+
+@app.route("/maps/<int:map_id>/rename", methods=["POST"])
+def map_rename(map_id):
+    conn = get_conn()
+    name = (request.form.get("name") or "").strip()
+    if name and models.get_map(conn, map_id) is not None:
+        models.rename_map(conn, map_id, name)
+    return redirect(url_for("map_view", map_id=map_id))
+
+
+@app.route("/maps/<int:map_id>/delete", methods=["POST"])
+def map_delete(map_id):
+    """Deletes this map, every pin on it, and its uploaded image. Any pin on
+    a *different* map that drilled down into this one just loses that link
+    (handled by the DB's ON DELETE SET NULL) rather than breaking."""
+    conn = get_conn()
+    filename = models.delete_map(conn, map_id)
+    if filename:
+        images.delete_upload(filename)
     return redirect(url_for("map_view"))
 
 
@@ -903,38 +958,55 @@ HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 @app.route("/map/pins", methods=["POST"])
 def map_pin_add():
-    """Drop a new pin on the world map at a clicked point (x/y as a percentage
-    of the image's own width/height, so it stays put across zoom levels), for
-    a City, Character, or Organization the map-viewer clicked on directly.
-    City and Organization pins are both colored by that entry's own
+    """Drop a new pin on the current map at a clicked point (x/y as a
+    percentage of the image's own width/height, so it stays put across zoom
+    levels), for a City, Character, or Organization the map-viewer clicked on
+    directly. City and Organization pins are both colored by that entry's own
     Disposition field; Character pins carry a free-picked symbol and color
     from the pin-placement form (falling back to a default star/violet if
-    left blank or sent malformed). Silently no-ops on bad input (out-of-range
-    coordinates, or a target that's none of the three) rather than erroring,
-    since this is only ever hit from the map page's own click-to-place
-    control, never a user-facing form that needs field-level errors."""
+    left blank or sent malformed). A pin can also optionally name a
+    target_map_id -- another map this pin should offer to "drill down" into
+    (e.g. a City pin on the World Map linking to that city's own street-level
+    map); leaving it unset just means this pin has no sub-map. Silently
+    no-ops on bad input (out-of-range coordinates, a target that's none of
+    the three, or an unknown map) rather than erroring, since this is only
+    ever hit from the map page's own click-to-place control, never a
+    user-facing form that needs field-level errors."""
     conn = get_conn()
+    map_id = request.form.get("map_id", type=int)
     entry_id = request.form.get("entry_id", type=int)
     x = request.form.get("x", type=float)
     y = request.form.get("y", type=float)
-    if entry_id and x is not None and y is not None and 0 <= x <= 100 and 0 <= y <= 100:
+    target_map_id = request.form.get("target_map_id", type=int)
+    if target_map_id and models.get_map(conn, target_map_id) is None:
+        target_map_id = None
+    if (
+        map_id and models.get_map(conn, map_id) is not None
+        and entry_id and x is not None and y is not None and 0 <= x <= 100 and 0 <= y <= 100
+    ):
         entry = models.get_entry(conn, entry_id)
         if entry and entry["category"] in ("City", "Organization"):
-            models.add_map_pin(conn, entry_id, x, y)
+            models.add_map_pin(conn, map_id, entry_id, x, y, target_map_id=target_map_id)
         elif entry and entry["category"] == "Character":
             symbol = (request.form.get("symbol") or "").strip()[:4] or models.DEFAULT_CHARACTER_PIN_SYMBOL
             color = (request.form.get("color") or "").strip()
             if not HEX_COLOR_RE.match(color):
                 color = models.DEFAULT_CHARACTER_PIN_COLOR
-            models.add_map_pin(conn, entry_id, x, y, symbol=symbol, color=color)
-    return redirect(url_for("map_view"))
+            models.add_map_pin(conn, map_id, entry_id, x, y, symbol=symbol, color=color, target_map_id=target_map_id)
+    return redirect(url_for("map_view", map_id=map_id))
+
+
+def _pin_map_id(conn, pin_id):
+    row = conn.execute("SELECT map_id FROM map_pin WHERE id = ?", (pin_id,)).fetchone()
+    return row["map_id"] if row else None
 
 
 @app.route("/map/pins/<int:pin_id>/delete", methods=["POST"])
 def map_pin_delete(pin_id):
     conn = get_conn()
+    map_id = _pin_map_id(conn, pin_id)
     models.delete_map_pin(conn, pin_id)
-    return redirect(url_for("map_view"))
+    return redirect(url_for("map_view", map_id=map_id))
 
 
 @app.route("/map/pins/<int:pin_id>/toggle-discovered", methods=["POST"])
@@ -942,10 +1014,10 @@ def map_pin_toggle_discovered(pin_id):
     """DM-only control (only rendered in the map template while DM Mode is
     on) for flipping a pin between hidden-from-players and revealed."""
     conn = get_conn()
-    pin = conn.execute("SELECT discovered FROM map_pin WHERE id = ?", (pin_id,)).fetchone()
+    pin = conn.execute("SELECT discovered, map_id FROM map_pin WHERE id = ?", (pin_id,)).fetchone()
     if pin is not None:
         models.set_pin_discovered(conn, pin_id, not pin["discovered"])
-    return redirect(url_for("map_view"))
+    return redirect(url_for("map_view", map_id=pin["map_id"] if pin else None))
 
 
 # Make sure the database tables exist no matter how this app is started.

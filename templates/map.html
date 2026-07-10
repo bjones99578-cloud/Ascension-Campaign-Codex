@@ -1,11 +1,41 @@
 {% extends "base.html" %}
-{% block title %}World Map — Ascension Campaign Codex{% endblock %}
+{% block title %}{{ current_map.name if current_map else 'Maps' }} — Ascension Campaign Codex{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>World Map</h1>
+  <h1>{{ current_map.name if current_map else 'Maps' }}</h1>
 </div>
 
-{% if map_filename %}
+{% if maps %}
+  <div class="map-switcher">
+    <form method="get" action="{{ url_for('map_view') }}" class="map-switcher-form">
+      <label>
+        Viewing
+        <select name="map_id" onchange="this.form.submit()">
+          {% for m in maps %}
+            <option value="{{ m['id'] }}" {% if current_map and m['id'] == current_map['id'] %}selected{% endif %}>{{ m['name'] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+    {% if current_map %}
+      <form method="post" action="{{ url_for('map_rename', map_id=current_map['id']) }}" class="map-switcher-form">
+        <label>
+          Rename this map
+          <input type="text" name="name" value="{{ current_map['name'] }}" required>
+        </label>
+        <button type="submit" class="btn">Rename</button>
+      </form>
+      <form method="post" action="{{ url_for('map_delete', map_id=current_map['id']) }}"
+            onsubmit="return confirm('Delete “{{ current_map['name'] }}” and every pin on it? This can\'t be undone.');">
+        <button type="submit" class="btn btn-danger">Delete This Map</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="divider"><span class="divider-mark"></span></div>
+{% endif %}
+
+{% if current_map and current_map['filename'] %}
   <div class="map-controls">
     <button type="button" class="btn" onclick="mapZoom(-20)">− Zoom Out</button>
     <button type="button" class="btn" onclick="mapZoom(0, true)">Reset</button>
@@ -32,6 +62,8 @@
     </p>
   {% endif %}
 
+  {% set other_maps = maps|rejectattr('id', 'equalto', current_map['id'])|list %}
+
   {% if not city_options and not character_options and not organization_options %}
     <p class="empty-state">
       Create a City, Character, or Organization entry first, then come back here to pin it on the map.
@@ -43,6 +75,7 @@
 
     {% if city_options %}
       <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="pinForm" style="display:none;">
+        <input type="hidden" name="map_id" value="{{ current_map['id'] }}">
         <input type="hidden" name="x" id="pinFormX">
         <input type="hidden" name="y" id="pinFormY">
         <label>
@@ -54,6 +87,17 @@
             {% endfor %}
           </select>
         </label>
+        {% if other_maps %}
+          <label>
+            Links to sub-map <span class="hint">(optional)</span>
+            <select name="target_map_id">
+              <option value="">— No sub-map —</option>
+              {% for m in other_maps %}
+                <option value="{{ m['id'] }}">{{ m['name'] }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endif %}
         <button type="submit" class="btn btn-primary">Place Pin</button>
         <button type="button" class="btn" id="pinFormCancel">Cancel</button>
       </form>
@@ -61,6 +105,7 @@
 
     {% if character_options %}
       <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="charPinForm" style="display:none;">
+        <input type="hidden" name="map_id" value="{{ current_map['id'] }}">
         <input type="hidden" name="x" id="charPinFormX">
         <input type="hidden" name="y" id="charPinFormY">
         <label>
@@ -80,6 +125,17 @@
           Pin color
           <input type="color" name="color" value="{{ default_pin_color }}">
         </label>
+        {% if other_maps %}
+          <label>
+            Links to sub-map <span class="hint">(optional)</span>
+            <select name="target_map_id">
+              <option value="">— No sub-map —</option>
+              {% for m in other_maps %}
+                <option value="{{ m['id'] }}">{{ m['name'] }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endif %}
         <button type="submit" class="btn btn-primary">Place Pin</button>
         <button type="button" class="btn" id="charPinFormCancel">Cancel</button>
       </form>
@@ -87,6 +143,7 @@
 
     {% if organization_options %}
       <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="orgPinForm" style="display:none;">
+        <input type="hidden" name="map_id" value="{{ current_map['id'] }}">
         <input type="hidden" name="x" id="orgPinFormX">
         <input type="hidden" name="y" id="orgPinFormY">
         <label>
@@ -98,6 +155,17 @@
             {% endfor %}
           </select>
         </label>
+        {% if other_maps %}
+          <label>
+            Links to sub-map <span class="hint">(optional)</span>
+            <select name="target_map_id">
+              <option value="">— No sub-map —</option>
+              {% for m in other_maps %}
+                <option value="{{ m['id'] }}">{{ m['name'] }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        {% endif %}
         <button type="submit" class="btn btn-primary">Place Pin</button>
         <button type="button" class="btn" id="orgPinFormCancel">Cancel</button>
       </form>
@@ -106,7 +174,7 @@
 
   <div class="map-page-wrap" id="mapWrap">
     <div class="map-inner" id="mapInner">
-      <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
+      <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ current_map['filename']) }}" alt="{{ current_map['name'] }}">
       <div class="map-pins cat-city" id="mapPins">
         {% for pin in pins %}
           {% set undiscovered_class = "map-pin-undiscovered" if not pin.discovered else "" %}
@@ -118,6 +186,7 @@
               <div class="map-pin-tooltip">
                 <strong>{{ pin.entry_name }}</strong>
                 <span>Last Known Status: {{ pin.character_status or 'Unknown' }}</span>
+                {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
                 {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
                 {% if dm_mode %}
                   <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
@@ -139,6 +208,7 @@
                 <strong>{{ pin.entry_name }}</strong>
                 <span>{% if pin.leader_name %}Led by {{ pin.leader_name }}{% else %}No known leader{% endif %}</span>
                 <span>{{ pin.org_type or 'Organization type unknown' }}</span>
+                {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
                 {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
                 {% if dm_mode %}
                   <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
@@ -164,6 +234,7 @@
                   {% else %}No known leader{% endif %}
                 </span>
                 <span>{{ pin.settlement_size or 'Settlement size unknown' }}</span>
+                {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
                 {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
                 {% if dm_mode %}
                   <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
@@ -187,19 +258,47 @@
 
   <div class="divider"><span class="divider-mark"></span></div>
 
-  <h2>Replace the map</h2>
-  <p class="empty-state">Uploading a new image here replaces the current map for everyone. Existing city pins are kept — re-check their placement against the new image afterward.</p>
+  <h2>Replace this map's image</h2>
+  <p class="empty-state">Uploading a new image here replaces “{{ current_map['name'] }}” for everyone. Existing pins are kept — re-check their placement against the new image afterward.</p>
+  <form method="post" action="{{ url_for('map_upload', map_id=current_map['id']) }}" enctype="multipart/form-data" class="entry-form" style="max-width: 420px;">
+    <label>
+      New map image
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp" required>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Upload Map</button>
+    </div>
+  </form>
+{% elif current_map %}
+  <p class="empty-state">“{{ current_map['name'] }}” doesn't have an image yet. Upload one below to start placing pins on it.</p>
+  <form method="post" action="{{ url_for('map_upload', map_id=current_map['id']) }}" enctype="multipart/form-data" class="entry-form" style="max-width: 420px;">
+    <label>
+      Map image
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp" required>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Upload Map</button>
+    </div>
+  </form>
 {% else %}
-  <p class="empty-state">No map has been uploaded yet. Add your hand-drawn world map below so the whole party can browse it.</p>
+  <p class="empty-state">No maps yet. The party can have any number — a World Map, a city street-map, a dungeon layout — each with its own pins. Create your first one below.</p>
 {% endif %}
 
-<form method="post" action="{{ url_for('map_upload') }}" enctype="multipart/form-data" class="entry-form" style="max-width: 420px;">
+<div class="divider"><span class="divider-mark"></span></div>
+
+<h2>Add a new map</h2>
+<p class="empty-state">Give it a name (e.g. "World Map", "Ravenport", "The Sunken Crypt") and, optionally, its image right away — you can also add or replace the image later.</p>
+<form method="post" action="{{ url_for('map_create') }}" enctype="multipart/form-data" class="entry-form" style="max-width: 420px;">
   <label>
-    {% if map_filename %}New map image{% else %}Map image{% endif %}
-    <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp" required>
+    Map name
+    <input type="text" name="name" placeholder="e.g. Ravenport City Map" required>
+  </label>
+  <label>
+    Map image <span class="hint">(optional — you can add this later)</span>
+    <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp">
   </label>
   <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Upload Map</button>
+    <button type="submit" class="btn btn-primary">Create Map</button>
   </div>
 </form>
 
