@@ -311,12 +311,17 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   Background, Player Name (their D&D Beyond username), Personality Traits,
   and Deity/Patron (when D&D Beyond has one on file); Status/Party Member
   default to Alive/Yes since an importable sheet is always an active PC.
-  Armor Class, Hit Points, Speed, and Passive Perception are deliberately
-  left blank rather than guessed — D&D Beyond derives those from equipped
-  gear and a pile of conditional bonuses this unofficial endpoint doesn't
-  expose pre-computed, so they're quick to fill in by hand instead of risking
-  a silently wrong combat stat. The write-up itself still gets stats,
-  personality traits, and backstory.
+  Armor Class, Hit Points, Speed, and Passive Perception are also computed
+  and pre-filled — from equipped armor/shield (with the right Dexterity cap
+  for Light/Medium/Heavy, plus Barbarian/Monk Unarmored Defense), levels and
+  Constitution for HP, race speed plus any flat speed bonuses, and skill
+  proficiency/expertise for Passive Perception. This is a best-effort read
+  of D&D Beyond's raw data rather than a live rules engine, so it covers the
+  common cases well but won't catch every exotic magic item or homebrew
+  modifier — worth a quick glance against the real sheet after import. The
+  write-up itself also gets a full skills table (every skill's modifier,
+  tagged Proficient/Expertise/Half Prof. where it applies) alongside the
+  ability scores, personality traits, and backstory.
   A race, class, or background D&D Beyond has that isn't one of the form's
   standard dropdown choices (a less common race, Artificer, a homebrew
   background) still comes through as-is rather than getting forced into

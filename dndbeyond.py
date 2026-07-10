@@ -8,6 +8,7 @@ is set to Public. Every failure path below is expected to happen eventually —
 this module is written to degrade to a clear error message rather than crash
 the app when that day comes.
 """
+import math
 import re
 
 import requests
@@ -38,6 +39,33 @@ ALIGNMENT_BY_ID = {
     8: "Neutral Evil",
     9: "Chaotic Evil",
 }
+
+
+# The 18 skills, each tied to an ability score id (see ABILITY_NAMES) and the
+# lowercase-hyphenated "subType" slug D&D Beyond's own modifier objects use
+# to reference them (e.g. a proficiency modifier granting Perception looks
+# like {"type": "proficiency", "subType": "perception", ...}). Order matches
+# D&D Beyond's own character sheet skill list.
+SKILL_DEFS = [
+    ("acrobatics", "Acrobatics", 2),
+    ("animal-handling", "Animal Handling", 5),
+    ("arcana", "Arcana", 4),
+    ("athletics", "Athletics", 1),
+    ("deception", "Deception", 6),
+    ("history", "History", 4),
+    ("insight", "Insight", 5),
+    ("intimidation", "Intimidation", 6),
+    ("investigation", "Investigation", 4),
+    ("medicine", "Medicine", 5),
+    ("nature", "Nature", 4),
+    ("perception", "Perception", 5),
+    ("performance", "Performance", 6),
+    ("persuasion", "Persuasion", 6),
+    ("religion", "Religion", 4),
+    ("sleight-of-hand", "Sleight of Hand", 2),
+    ("stealth", "Stealth", 2),
+    ("survival", "Survival", 5),
+]
 
 
 class DndBeyondError(Exception):
@@ -143,21 +171,198 @@ def _primary_class_info(data):
     return class_name, subclass_name, (total_level or None)
 
 
-def _stats_table(data):
+def _ability_scores(data):
+    """Final 1-6 ability-id -> score dict, folding in bonusStats (racial/
+    misc flat bonuses) and overrideStats (a DM/player-set final value that
+    wins over everything else) the same way D&D Beyond's own sheet does."""
     base = {s.get("id"): s.get("value") for s in (data.get("stats") or []) if s.get("value") is not None}
     bonus = {s.get("id"): s.get("value") for s in (data.get("bonusStats") or []) if s.get("value") is not None}
     override = {s.get("id"): s.get("value") for s in (data.get("overrideStats") or []) if s.get("value") is not None}
 
-    if not base and not override:
-        return ""
-
-    lines = ["| Ability | Score |", "|---|---|"]
+    scores = {}
     for i in range(1, 7):
         if i in override:
-            value = override[i]
+            scores[i] = override[i]
         else:
-            value = base.get(i, 10) + bonus.get(i, 0)
-        lines.append(f"| {ABILITY_NAMES[i]} | {value} |")
+            scores[i] = base.get(i, 10) + bonus.get(i, 0)
+    return scores
+
+
+def _ability_mod(score):
+    return (score - 10) // 2
+
+
+def _has_ability_data(data):
+    """True if the payload actually carried ability-score data, as opposed
+    to _ability_scores' always-populated (defaults to 10) return value --
+    used to skip the Ability/Skill/AC/HP/Speed sections entirely for a
+    payload that never had real stats to begin with, rather than rendering
+    a table of guessed-at 10s as if it meant something."""
+    return bool(data.get("stats") or data.get("overrideStats"))
+
+
+def _stats_table(data):
+    if not _has_ability_data(data):
+        return ""
+    scores = _ability_scores(data)
+    lines = ["| Ability | Score |", "|---|---|"]
+    for i in range(1, 7):
+        lines.append(f"| {ABILITY_NAMES[i]} | {scores[i]} |")
+    return "\n".join(lines)
+
+
+def _all_modifiers(data):
+    """Flatten data["modifiers"] (a dict of lists keyed "race"/"class"/
+    "background"/"feat"/"item"/"condition") into one list, since AC/HP/
+    Speed/skill bonuses can each come from any of those categories and we
+    only care about the individual modifier entries, not which one granted
+    them."""
+    groups = data.get("modifiers") or {}
+    result = []
+    for group in groups.values():
+        if isinstance(group, list):
+            result.extend(group)
+    return result
+
+
+def _total_level(data):
+    classes = data.get("classes") or []
+    total = sum(c.get("level") or 0 for c in classes)
+    return total or 1
+
+
+def _proficiency_bonus(total_level):
+    return 2 + (total_level - 1) // 4
+
+
+def _skill_proficiency_multiplier(modifiers, subtype):
+    """Highest of Proficient (x1), Expertise (x2), or Jack-of-All-Trades-style
+    Half-Proficiency (x0.5) granted for one skill/passive-perception subtype,
+    matching how D&D Beyond itself resolves stacking proficiency sources
+    (expertise always wins over plain proficiency, which always wins over
+    half-proficiency)."""
+    mult = 0.0
+    for m in modifiers:
+        if m.get("subType") != subtype:
+            continue
+        m_type = m.get("type")
+        if m_type == "expertise":
+            mult = max(mult, 2.0)
+        elif m_type == "proficiency":
+            mult = max(mult, 1.0)
+        elif m_type == "half-proficiency":
+            mult = max(mult, 0.5)
+    return mult
+
+
+def _flat_bonus(modifiers, subtype):
+    total = 0
+    for m in modifiers:
+        if m.get("type") == "bonus" and m.get("subType") == subtype and isinstance(m.get("value"), (int, float)):
+            total += m["value"]
+    return total
+
+
+def _compute_armor_class(data, ability_scores, modifiers):
+    """Best-effort AC: equipped armor's own base AC plus a Dexterity modifier
+    capped per armor category (full for Light, +2 max for Medium, none for
+    Heavy), an equipped shield's bonus, any flat "armor-class" bonus
+    modifiers (fighting styles, magic items, feats), and -- if nothing is
+    equipped -- an Unarmored Defense-style "set" modifier (Barbarian uses
+    Constitution, Monk uses Wisdom) layered over the standard 10 + Dex.
+    Deliberately conservative: unrecognized armor "type" strings fall back
+    to treating Dex as fully applied rather than guessing a cap."""
+    dex_mod = _ability_mod(ability_scores.get(2, 10))
+    inventory = data.get("inventory") or []
+
+    equipped_armor = None
+    shield_bonus = 0
+    for item in inventory:
+        if not item.get("equipped"):
+            continue
+        definition = item.get("definition") or {}
+        ac_value = definition.get("armorClass")
+        if ac_value is None:
+            continue
+        item_type = (definition.get("type") or definition.get("filterType") or "").lower()
+        if "shield" in item_type:
+            shield_bonus += ac_value
+        elif equipped_armor is None:
+            equipped_armor = (ac_value, item_type)
+
+    flat_bonus = _flat_bonus(modifiers, "armor-class")
+
+    if equipped_armor:
+        base_ac, item_type = equipped_armor
+        if "light" in item_type:
+            ac = base_ac + dex_mod
+        elif "medium" in item_type:
+            ac = base_ac + min(dex_mod, 2)
+        elif "heavy" in item_type:
+            ac = base_ac
+        else:
+            ac = base_ac + dex_mod
+    else:
+        unarmored_stat_id = None
+        for m in modifiers:
+            if m.get("type") == "set" and m.get("subType") == "unarmored-armor-class" and m.get("statId"):
+                unarmored_stat_id = m["statId"]
+        ac = 10 + dex_mod
+        if unarmored_stat_id:
+            ac += _ability_mod(ability_scores.get(unarmored_stat_id, 10))
+
+    return round(ac + shield_bonus + flat_bonus)
+
+
+def _compute_hit_points(data, total_level, ability_scores):
+    """baseHitPoints is D&D Beyond's running total of hit-die rolls/averages
+    from leveling up ONLY -- it deliberately excludes the Constitution
+    contribution, which has to be added back in separately (conMod per
+    total level). overrideHitPoints, when set, is a manual value that wins
+    over all of the above."""
+    override = data.get("overrideHitPoints")
+    if override:
+        return round(override)
+    base = data.get("baseHitPoints") or 0
+    bonus = data.get("bonusHitPoints") or 0
+    if not base:
+        return None
+    con_mod = _ability_mod(ability_scores.get(3, 10))
+    return round(base + bonus + con_mod * total_level)
+
+
+def _compute_speed(data, modifiers):
+    race_speeds = ((data.get("race") or {}).get("weightSpeeds") or {}).get("normal") or {}
+    walk = race_speeds.get("walk")
+    if walk is None:
+        return None
+    for m in modifiers:
+        if m.get("type") == "set" and m.get("subType") == "innate-speed-walking" and m.get("value"):
+            walk = m["value"]
+    walk += _flat_bonus(modifiers, "speed") + _flat_bonus(modifiers, "speed-walking") + _flat_bonus(modifiers, "unarmored-movement")
+    return round(walk)
+
+
+def _compute_passive_perception(modifiers, ability_scores, prof_bonus):
+    wis_mod = _ability_mod(ability_scores.get(5, 10))
+    mult = _skill_proficiency_multiplier(modifiers, "perception")
+    passive = 10 + wis_mod + math.floor(mult * prof_bonus)
+    passive += _flat_bonus(modifiers, "passive-perception")
+    return round(passive)
+
+
+def _skills_table(modifiers, ability_scores, prof_bonus):
+    """A markdown table of every skill's modifier, tagging which ones the
+    character is Proficient/Expertise/Half-Proficient in -- skills with no
+    training show just the plain ability modifier, same as a blank sheet."""
+    lines = ["| Skill | Modifier |", "|---|---|"]
+    for subtype, label, ability_id in SKILL_DEFS:
+        mult = _skill_proficiency_multiplier(modifiers, subtype)
+        ability_mod = _ability_mod(ability_scores.get(ability_id, 10))
+        total = ability_mod + math.floor(mult * prof_bonus)
+        sign = "+" if total >= 0 else ""
+        tag = {2.0: " (Expertise)", 1.0: " (Proficient)", 0.5: " (Half Prof.)"}.get(mult, "")
+        lines.append(f"| {label} | {sign}{total}{tag} |")
     return "\n".join(lines)
 
 
@@ -188,6 +393,47 @@ def build_entry_fields(data):
     if stats_md:
         content_parts.append(stats_md)
 
+    ability_scores = _ability_scores(data)
+    modifiers = _all_modifiers(data)
+    total_level_for_pb = _total_level(data)
+    prof_bonus = _proficiency_bonus(total_level_for_pb)
+    armor_class = None
+    hit_points = None
+    speed = None
+    passive_perception = None
+    if _has_ability_data(data):
+        # Best-effort combat-stat math from the raw payload (equipped armor,
+        # proficiency/expertise modifiers, race base speed, etc.) -- see the
+        # _compute_*/​_skills_table helpers above for exactly what is and
+        # isn't accounted for. This covers the common cases (standard
+        # Light/Medium/Heavy armor + shield, Barbarian/Monk Unarmored
+        # Defense, ordinary skill proficiencies) but, like any unofficial
+        # parse of D&D Beyond's data, can't promise to catch every exotic
+        # magic item or homebrew modifier -- worth a quick glance against
+        # the real sheet after import rather than treated as gospel.
+        try:
+            armor_class = _compute_armor_class(data, ability_scores, modifiers)
+        except Exception:
+            armor_class = None
+        try:
+            hit_points = _compute_hit_points(data, total_level_for_pb, ability_scores)
+        except Exception:
+            hit_points = None
+        try:
+            speed = _compute_speed(data, modifiers)
+        except Exception:
+            speed = None
+        try:
+            passive_perception = _compute_passive_perception(modifiers, ability_scores, prof_bonus)
+        except Exception:
+            passive_perception = None
+
+        try:
+            skills_md = _skills_table(modifiers, ability_scores, prof_bonus)
+            content_parts.append(skills_md)
+        except Exception:
+            pass
+
     for label, key in [
         ("Personality", "personalityTraits"),
         ("Ideals", "ideals"),
@@ -212,12 +458,7 @@ def build_entry_fields(data):
     personality_traits = (traits.get("personalityTraits") or "").strip()
     # D&D Beyond's unofficial payload sometimes carries a "faith" field for a
     # character's deity/patron -- straightforward to read when present, but
-    # not guaranteed across every character, hence the defensive .get. AC/HP/
-    # Speed/Passive Perception are deliberately NOT auto-filled here: D&D
-    # Beyond derives those client-side from equipped gear, ability scores,
-    # and a pile of conditional bonuses that this unofficial endpoint doesn't
-    # expose pre-computed, so guessing at them risks silently wrong combat
-    # stats -- better left as a quick manual entry after import.
+    # not guaranteed across every character, hence the defensive .get.
     deity_patron = (data.get("faith") or "").strip()
 
     # These map straight onto the Character category's DETAIL_FIELDS columns
@@ -245,6 +486,10 @@ def build_entry_fields(data):
         "player_name": player_name or None,
         "personality_traits": personality_traits or None,
         "deity_patron": deity_patron or None,
+        "armor_class": armor_class,
+        "hit_points": hit_points,
+        "speed": speed,
+        "passive_perception": passive_perception,
     }
 
     return {
