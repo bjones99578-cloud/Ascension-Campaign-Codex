@@ -1,9 +1,10 @@
 # Ascension Campaign Codex
 
 A tiny shared wiki for your D&D party: track regions, cities, characters,
-organizations, locations, items, and quests, with wiki-style `[[links]]`
-between entries and automatic "what links here" backlinks — like a mini
-Wikipedia for your world.
+organizations, items, and quests, with wiki-style `[[links]]` between entries
+and automatic "what links here" backlinks — like a mini Wikipedia for your
+world. It also has a dedicated Bastion tab for the party's own shared
+stronghold (see below).
 
 Built with Flask + SQLite. No build step, no JavaScript framework, one database
 file.
@@ -27,8 +28,9 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
 
 ## How it works
 
-- **Categories**: Region, City, Character, Organization, Location, Item,
-  Quest, Session Log. Browse by category from the top nav, or use the search bar.
+- **Categories**: Region, City, Character, Organization, Item, Quest, Session
+  Log. Browse by category from the top nav, or use the search bar. (The
+  Bastion is a separate nav tab of its own, not a category — see below.)
 - **Structured relationships**: alongside free-text `[[wiki links]]`, a few
   entry types have explicit dropdown fields so the connection is guaranteed
   to show up in the right table even if nobody remembers to write a link:
@@ -39,12 +41,10 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   (any Character). Set these when creating or editing an entry — the
   dropdown only appears once you've picked the matching category. Entries
   linked either way (dropdown or `[[wiki link]]`) show up together in the
-  same table, de-duplicated. Two more such relationships: an Item can pick a
+  same table, de-duplicated. One more such relationship: an Item can pick a
   **Current Holder** (the Character carrying it right now — shows up on the
   Item as "Carried by" and on that Character's own page as a "Carried Items"
-  table), and a Location can pick a **Controlling Organization** (the faction
-  that owns or runs the place — shows up on the Location as "Controlled by"
-  and on that Organization's own page as a "Controlled Locations" table).
+  table).
 - **Typical D&D fields per category**: each category also has a few
   quick-reference fields shown right under the title, separate from the
   free-text content — fill in whichever apply, everything's optional:
@@ -65,7 +65,6 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
     Disbanded / Dissolved / Dormant), Disposition (Friendly / Neutral /
     Hostile — toward the party, same field City uses)
   - **Region**: Terrain, Climate
-  - **Location**: Location Type, Danger Level
   - **Item**: Item Type, Rarity, Requires Attunement, Quantity (how many of
     this item are in the stack — Estimated Value is still the total for the
     whole stack, not a per-unit price), Estimated Value (gp), Status (In
@@ -101,7 +100,7 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   (with Subclass), Level, Status, and (on the Characters page) Home City at a
   glance, instead of just a name and a one-line summary.
 - **Everything in tables**: category listing pages (Cities, Organizations,
-  Regions, Locations, Items, Quests) and the relationship sections on an
+  Regions, Items, Quests) and the relationship sections on an
   entry's own page (a City's Factions/Quests, an Organization's Members, a
   Region's Cities) render as proper tables of that category's typical
   fields — Settlement Size/Government/Population for Cities, Type/Leader/
@@ -115,12 +114,13 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   Organization (with Type/Leader/Status/Alignment) connected to it, all on
   one screen instead of clicking through separate entry pages as the party
   travels around.
-- **A theme per category**: each of the eight categories has its own custom
+- **A theme per category**: each of the seven categories has its own custom
   icon and ink color — deep gold for Regions, brown-gold for Cities, violet
-  for Characters, deep rose for Organizations, teal for Locations, rust for
-  Items, indigo for Quests, and warm brown for Session Logs — carried through
-  the nav, category badges, category pages, and entry pages, so each type of
-  entry has its own distinct look at a glance.
+  for Characters, deep rose for Organizations, rust for Items, indigo for
+  Quests, and warm brown for Session Logs — carried through the nav, category
+  badges, category pages, and entry pages, so each type of entry has its own
+  distinct look at a glance. The Bastion tab reuses that same teal that used
+  to belong to Locations, since it isn't a category of its own.
 - **Look and feel**: the whole codex is styled like a hand-kept fantasy
   journal rather than a flat wiki — a warm aged-parchment background with a
   subtle paper-grain texture, ink-brown text, an illuminated-manuscript-style
@@ -172,6 +172,41 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   right now. An item stops showing up here the moment somebody sets its
   Current Holder field (on the full Entry form) — clear that field again to
   move it back into the shared stash.
+- **Bastion**: the "Bastion" link in the nav tracks the party's own shared
+  stronghold (a floating cloud ship, in this campaign) using the 2024
+  Dungeon Master's Guide's Bastion rules — hand-entered here since D&D Beyond
+  itself has no Bastion data source of any kind (no API, no character-sheet
+  field; its own Bastion support is still just a blank fillable PDF as of
+  this writing). Rather than tracking a separate Bastion per character per
+  the DMG's default, this app treats it as one shared sheet for the whole
+  crew, driven by a single manual **Bastion level** you set yourself (1–20)
+  — raising it unlocks more Special Facility slots (2 at level 5, 4 at 9, 5
+  at 13, 6 at 17), matching the DMG's slot-count table.
+  - **Basic Facilities**: free, flavor-only rooms (Bedroom, Courtyard, Dining
+    Room, Kitchen, Parlor, Storage) with no Orders or hirelings — add as
+    many as you like, any time.
+  - **Special Facilities**: each of the level-gated slots lets you pick from
+    the official facility list unlocked at your current Bastion level (e.g.
+    Smithy or Library at level 5, Laboratory at level 9), or type a fully
+    custom/homebrew facility name instead by picking "Custom / homebrew…" in
+    the dropdown. Every Special Facility slot also has a **Current Order**
+    (Craft/Trade/Empower/Harvest/Recruit/Research, the DMG's weekly Bastion
+    Orders), a free-text **Hirelings** field, and Notes.
+  - **Editable names, two ways**: every built facility — Basic or Special —
+    has its own free-text **Name** field, so "Smithy" can become "The
+    Forgeworks" for your specific ship without touching anything else. Separately,
+    the **Facility Types** section further down the page lets you rename or
+    re-describe the official facility *type* itself (e.g. renaming "Arcane
+    Study" to "The Sky Loom" everywhere it's used, party-wide) — the
+    original 2024 DMG name stays visible alongside as "official: ..." so you
+    never lose track of which real rules a homebrew name maps back to.
+  - **Non-destructive level changes**: lowering the Bastion level below the
+    number of Special Facilities you've already built never deletes
+    anything — it just flags that you're over the currently-unlocked slot
+    count (with an explanation right on the page) until you either raise the
+    level back up or remove some facilities yourself.
+  - **No live D&D Beyond import for this** (there's nothing to import — see
+    above); everything here is entered and named by hand, by design.
 - **Timeline**: the "Timeline" link in the nav is the campaign's story so
   far as a single chronological feed — every Session Log entry in play
   order (earliest first), each showing its Session #, Session Date,
@@ -203,7 +238,7 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   appears. It skips a name inside a code block or already-manual
   `[[wiki link]]`, and an entry mentioning its own name doesn't link to
   itself. This only applies to Regions, Cities, and Characters — Organizations,
-  Locations, Items, and Quests still need an explicit `[[wiki link]]`.
+  Items, and Quests still need an explicit `[[wiki link]]`.
   Renaming or deleting a Region/City/Character updates every other entry's
   links to match immediately, and an entry written before some City existed
   picks up the link retroactively the moment that City is created — nothing

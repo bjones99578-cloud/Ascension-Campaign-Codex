@@ -113,25 +113,6 @@
       </tbody>
     </table>
 
-  {% elif category == "Location" %}
-    <table class="related-table entry-data-table">
-      <thead>
-        <tr><th>Name</th><th>Type</th><th>Danger Level</th><th>Controlled By</th><th>Summary</th></tr>
-      </thead>
-      <tbody>
-        {% for e in entries %}
-          {% set names = related_names.get(e['id'], {}) %}
-          <tr>
-            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
-            <td>{{ e['location_type'] or '—' }}</td>
-            <td>{{ e['danger_level'] or '—' }}</td>
-            <td>{% if names.controlling_org %}<a href="{{ url_for('entry_detail', entry_id=names.controlling_org['id']) }}">{{ names.controlling_org['name'] }}</a>{% else %}—{% endif %}</td>
-            <td>{{ e['summary'] or '' }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
   {% elif category == "Item" %}
     <table class="related-table entry-data-table">
       <thead>

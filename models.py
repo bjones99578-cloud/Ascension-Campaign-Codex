@@ -21,7 +21,6 @@ CATEGORIES = [
     "City",
     "Character",
     "Organization",
-    "Location",
     "Item",
     "Quest",
     "SessionLog",
@@ -32,7 +31,6 @@ CATEGORY_PLURALS = {
     "City": "Cities",
     "Character": "Characters",
     "Organization": "Organizations",
-    "Location": "Locations",
     "Item": "Items",
     "Quest": "Quests",
     "SessionLog": "Session Logs",
@@ -63,10 +61,9 @@ LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
 #   shared by Character and Organization -- it's the same concept ("the
 #   Character who leads this") regardless of which category it's attached to.
 #   current_holder_id -> Item (which Character is currently carrying it)
-#   controlling_org_id -> Location (which Organization controls/owns it)
 RELATIONSHIP_COLUMNS = (
     "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-    "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
+    "current_city_id", "leading_organization_id", "current_holder_id",
 )
 
 # Party roster: a fixed 5-slot lineup of Player Characters, managed separately
@@ -197,14 +194,6 @@ TERRAIN_OPTIONS = [
 
 CLIMATE_OPTIONS = ["Temperate", "Tropical", "Arid", "Arctic", "Subarctic", "Variable", "Other"]
 
-LOCATION_TYPE_OPTIONS = [
-    "Dungeon", "Ruins", "Temple/Shrine", "Cave/Cavern", "Forest Grove",
-    "Camp/Outpost", "Shop", "Tavern/Inn", "Tower", "Castle/Keep",
-    "Battlefield", "Other",
-]
-
-DANGER_LEVEL_OPTIONS = ["Safe", "Low", "Moderate", "High", "Deadly"]
-
 ITEM_TYPE_OPTIONS = [
     "Weapon", "Armor", "Shield", "Wondrous Item", "Potion", "Scroll",
     "Ring", "Rod", "Staff", "Wand", "Ammunition", "Other",
@@ -289,10 +278,6 @@ DETAIL_FIELDS = {
     "Region": [
         {"name": "terrain", "label": "Terrain", "type": "select", "options": TERRAIN_OPTIONS},
         {"name": "climate", "label": "Climate", "type": "select", "options": CLIMATE_OPTIONS},
-    ],
-    "Location": [
-        {"name": "location_type", "label": "Location Type", "type": "select", "options": LOCATION_TYPE_OPTIONS},
-        {"name": "danger_level", "label": "Danger Level", "type": "select", "options": DANGER_LEVEL_OPTIONS},
     ],
     "Item": [
         {"name": "item_type", "label": "Item Type", "type": "select", "options": ITEM_TYPE_OPTIONS},
@@ -501,6 +486,34 @@ def init_db():
             created_at TEXT NOT NULL
         );
 
+        -- One row per facility the party has actually built on their shared
+        -- Bastion. slot_category is 'Basic' or 'Special'; facility_key
+        -- points at a bastion.BASIC_FACILITIES/SPECIAL_FACILITIES entry (or
+        -- is NULL/'custom' for a wholly homebrew facility with no official
+        -- counterpart, using custom_type_name instead).
+        CREATE TABLE IF NOT EXISTS bastion_facility (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot_category TEXT NOT NULL,
+            facility_key TEXT,
+            custom_type_name TEXT,
+            instance_name TEXT,
+            current_order TEXT,
+            hirelings TEXT,
+            notes TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
+        -- A party-wide rename/re-description of an official facility TYPE
+        -- (e.g. "Arcane Study" -> "The Sky Loom" for a homebrew airship
+        -- theme) -- affects every slot using that facility_key, not just
+        -- one instance. See bastion.merged_facility_types.
+        CREATE TABLE IF NOT EXISTS bastion_facility_type_override (
+            facility_key TEXT PRIMARY KEY,
+            custom_name TEXT,
+            custom_description TEXT
+        );
+
         CREATE INDEX IF NOT EXISTS idx_link_source ON link (source_id);
         CREATE INDEX IF NOT EXISTS idx_link_target ON link (target_id);
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
@@ -604,7 +617,7 @@ def find_entry_by_name(conn, name):
 # deliberately just these three, not every category, per how the party
 # wants this to work: plain mentions of a Region/City/Character's name turn
 # into a link on their own, with no [[brackets]] required, while
-# Organizations/Locations/Items/etc. still need an explicit [[wiki link]].
+# Organizations/Items/etc. still need an explicit [[wiki link]].
 LINKABLE_NAME_CATEGORIES = ("Region", "City", "Character")
 
 
@@ -913,17 +926,6 @@ def get_items_held_by(conn, character_id):
     ).fetchall()
 
 
-def get_locations_controlled_by(conn, organization_id):
-    """Every Location whose Controlling Organization dropdown points at this
-    Organization -- shown as a "Controlled Locations" table on the
-    Organization's own page."""
-    return conn.execute(
-        "SELECT id, name, category, summary FROM entry "
-        "WHERE category = 'Location' AND controlling_org_id = ? ORDER BY name COLLATE NOCASE ASC",
-        (organization_id,),
-    ).fetchall()
-
-
 DEFAULT_CHARACTER_PIN_SYMBOL = "★"
 DEFAULT_CHARACTER_PIN_COLOR = "#a78bfa"  # matches the Character category's own violet theme
 
@@ -1101,6 +1103,83 @@ def update_item_loot_fields(conn, entry_id, name, item_type, quantity, rarity, e
     conn.commit()
 
 
+# ---------- Bastion ----------
+
+def get_bastion_facilities(conn, slot_category=None):
+    """Every built facility, alphabetical within creation order. Pass
+    slot_category ("Basic" or "Special") to fetch just one section --
+    the Bastion page needs both, separately, to render its two tables."""
+    if slot_category:
+        return conn.execute(
+            "SELECT * FROM bastion_facility WHERE slot_category = ? ORDER BY sort_order ASC, id ASC",
+            (slot_category,),
+        ).fetchall()
+    return conn.execute(
+        "SELECT * FROM bastion_facility ORDER BY sort_order ASC, id ASC"
+    ).fetchall()
+
+
+def get_bastion_facility(conn, facility_id):
+    return conn.execute(
+        "SELECT * FROM bastion_facility WHERE id = ?", (facility_id,)
+    ).fetchone()
+
+
+def add_bastion_facility(conn, slot_category):
+    """A freshly added, still-empty slot -- the party picks its facility
+    type and fills in the rest via update_bastion_facility afterward. New
+    slots sort after every existing one of the same category."""
+    row = conn.execute(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM bastion_facility WHERE slot_category = ?",
+        (slot_category,),
+    ).fetchone()
+    cur = conn.execute(
+        "INSERT INTO bastion_facility (slot_category, sort_order, created_at) VALUES (?, ?, ?)",
+        (slot_category, row["next_order"], now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def update_bastion_facility(conn, facility_id, facility_key, custom_type_name, instance_name,
+                             current_order, hirelings, notes):
+    conn.execute(
+        """
+        UPDATE bastion_facility
+        SET facility_key = ?, custom_type_name = ?, instance_name = ?,
+            current_order = ?, hirelings = ?, notes = ?
+        WHERE id = ?
+        """,
+        (facility_key, custom_type_name, instance_name, current_order, hirelings, notes, facility_id),
+    )
+    conn.commit()
+
+
+def delete_bastion_facility(conn, facility_id):
+    conn.execute("DELETE FROM bastion_facility WHERE id = ?", (facility_id,))
+    conn.commit()
+
+
+def set_bastion_facility_type_override(conn, facility_key, custom_name, custom_description):
+    """Renames/re-describes an official facility TYPE for the whole party
+    (not just one built instance) -- blank fields clear back to the
+    official name/description rather than saving an empty override."""
+    custom_name = (custom_name or "").strip() or None
+    custom_description = (custom_description or "").strip() or None
+    if not custom_name and not custom_description:
+        conn.execute("DELETE FROM bastion_facility_type_override WHERE facility_key = ?", (facility_key,))
+    else:
+        conn.execute(
+            """
+            INSERT INTO bastion_facility_type_override (facility_key, custom_name, custom_description)
+            VALUES (?, ?, ?)
+            ON CONFLICT(facility_key) DO UPDATE SET custom_name = excluded.custom_name, custom_description = excluded.custom_description
+            """,
+            (facility_key, custom_name, custom_description),
+        )
+    conn.commit()
+
+
 def get_player_characters(conn):
     """All Characters flagged as party members, alphabetical — used for the
     roster page's occupied-slot lookup and its "assign an existing character"
@@ -1114,7 +1193,7 @@ def get_player_characters(conn):
 def create_entry(conn, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
                   leader_id=None, current_city_id=None, leading_organization_id=None,
-                  current_holder_id=None, controlling_org_id=None,
+                  current_holder_id=None,
                   pc_slot=None, details=None):
     """details: dict mapping a DETAIL_COLUMNS column name to its value (or None) —
     the typical D&D fields (Species, Class, Alignment, etc.) relevant to whichever
@@ -1126,13 +1205,13 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
     base_cols = [
         "name", "category", "summary", "content", "author", "image_filename",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
+        "current_city_id", "leading_organization_id", "current_holder_id",
         "pc_slot", "created_at", "updated_at",
     ]
     base_vals = [
         name.strip(), category, summary.strip(), content, author.strip(), image_filename,
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, leading_organization_id, current_holder_id, controlling_org_id,
+        current_city_id, leading_organization_id, current_holder_id,
         pc_slot, ts, ts,
     ]
     all_cols = base_cols + DETAIL_COLUMNS
@@ -1157,7 +1236,7 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
 def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
                   leader_id=None, current_city_id=None, leading_organization_id=None,
-                  current_holder_id=None, controlling_org_id=None,
+                  current_holder_id=None,
                   pc_slot=None, details=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
     leave whatever image is already set untouched (use clear_entry_image to remove it).
@@ -1173,13 +1252,13 @@ def update_entry(conn, entry_id, name, category, summary, content, author, image
     set_cols = [
         "name", "category", "summary", "content", "author",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
+        "current_city_id", "leading_organization_id", "current_holder_id",
         "pc_slot",
     ]
     set_vals = [
         name.strip(), category, summary.strip(), content, author.strip(),
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, leading_organization_id, current_holder_id, controlling_org_id,
+        current_city_id, leading_organization_id, current_holder_id,
         pc_slot,
     ]
     if image_filename is not None:

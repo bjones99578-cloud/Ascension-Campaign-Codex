@@ -34,6 +34,10 @@
       <img class="cat-icon" src="{{ url_for('static', filename='icons/item.svg') }}" alt="">
       Loot Tracker
     </a>
+    <a href="{{ url_for('bastion_page') }}" class="cat-bastion {% if request.path == url_for('bastion_page') %}active{% endif %}">
+      <img class="cat-icon" src="{{ url_for('static', filename='icons/bastion.svg') }}" alt="">
+      Bastion
+    </a>
     <a href="{{ url_for('timeline') }}" class="cat-sessionlog {% if request.path == url_for('timeline') %}active{% endif %}">
       <img class="cat-icon" src="{{ url_for('static', filename='icons/sessionlog.svg') }}" alt="">
       Timeline

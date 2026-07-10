@@ -187,18 +187,6 @@
     </label>
   </div>
 
-  <div class="field-group" data-show-for="Location">
-    <label>
-      Controlling Organization <span class="hint">(optional — the faction that owns or controls this place, if any)</span>
-      <select name="controlling_org">
-        <option value="">— None —</option>
-        {% for org in organization_options %}
-          <option value="{{ org['id'] }}" {% if form.controlling_org_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
-        {% endfor %}
-      </select>
-    </label>
-  </div>
-
   <label>
     Short summary <span class="hint">(one line, shown in listings)</span>
     <input type="text" name="summary" value="{{ form.summary }}">

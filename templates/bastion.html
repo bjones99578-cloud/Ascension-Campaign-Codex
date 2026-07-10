@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Bastion — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-bastion{% endblock %}
+
+{% macro type_select(name, form_id, types, current_key, custom_label) %}
+  <select name="{{ name }}" form="{{ form_id }}" class="loot-input">
+    <option value=""{% if not current_key %} selected{% endif %}>— Not picked yet —</option>
+    {% for t in types %}
+      <option value="{{ t.key }}"{% if t.key == current_key %} selected{% endif %}>{{ t.name }}{% if t.level %} (Lvl {{ t.level }}){% endif %}</option>
+    {% endfor %}
+    <option value="__custom__"{% if custom_label %} selected{% endif %}>Custom / homebrew…</option>
+  </select>
+{% endmacro %}
+
+{% macro facility_row(facility, types, form_id) %}
+  {% set is_custom = not facility['facility_key'] and facility['custom_type_name'] %}
+  {% set current_type = facility_types_by_key.get(facility['facility_key']) %}
+  <tr>
+    <td>
+      {{ type_select("facility_key", form_id, types, facility['facility_key'], is_custom) }}
+      <input type="text" name="custom_type_name" form="{{ form_id }}" placeholder="Custom type name…"
+             value="{{ facility['custom_type_name'] or '' }}" class="loot-input bastion-input-custom-type">
+    </td>
+    <td><input type="text" name="instance_name" form="{{ form_id }}" value="{{ facility['instance_name'] or '' }}" placeholder="e.g. The Sky Loom" class="loot-input"></td>
+    {% if facility['slot_category'] == 'Special' %}
+      <td>
+        <select name="current_order" form="{{ form_id }}" class="loot-input">
+          <option value=""{% if not facility['current_order'] %} selected{% endif %}>—</option>
+          {% for o in order_options %}
+            <option value="{{ o }}"{% if o == facility['current_order'] %} selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+      </td>
+      <td><input type="text" name="hirelings" form="{{ form_id }}" value="{{ facility['hirelings'] or '' }}" class="loot-input"></td>
+    {% endif %}
+    <td><input type="text" name="notes" form="{{ form_id }}" value="{{ facility['notes'] or '' }}" placeholder="notes…" class="loot-input bastion-input-notes"></td>
+    <td class="loot-row-actions">
+      <button type="submit" form="{{ form_id }}" class="btn btn-primary btn-sm">Save</button>
+      <form method="post" action="{{ url_for('bastion_facility_delete', facility_id=facility['id']) }}" class="loot-delete-form"
+            onsubmit="return confirm('Remove this facility slot from the Bastion?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </td>
+  </tr>
+  {% if current_type %}
+    <tr class="bastion-description-row">
+      <td colspan="{{ 6 if facility['slot_category'] == 'Special' else 4 }}">
+        <span class="bastion-description">{{ current_type.description }}</span>
+      </td>
+    </tr>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/bastion.svg') }}" alt="">
+      <h1>{{ bastion_name or "The Bastion" }}</h1>
+    </div>
+  </div>
+  <p class="summary">The crew's shared floating stronghold. Set your Bastion's level to unlock Special Facility slots (2 at level 5, 4 at 9, 5 at 13, 6 at 17), pick a facility for each slot, and rename anything to fit your homebrew airship.</p>
+</div>
+
+<form class="entry-form search-filters-form" method="post" action="{{ url_for('bastion_settings_update') }}">
+  <label>
+    Bastion name
+    <input type="text" name="bastion_name" value="{{ bastion_name }}" placeholder="e.g. The Windrunner">
+  </label>
+  <label>
+    Bastion level
+    <input type="number" name="bastion_level" min="1" max="20" value="{{ bastion_level }}" style="width: 5rem;">
+  </label>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save</button>
+  </div>
+</form>
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+<div class="section-heading"><span class="section-heading-mark"></span>Basic Facilities<span class="section-heading-mark"></span></div>
+<p class="summary">Free, flavor-only rooms — no Orders or hirelings, just roleplay. Add as many as you like.</p>
+
+{% for facility in basic_facilities %}
+  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}"></form>
+{% endfor %}
+{% if basic_facilities %}
+  <table class="related-table bastion-table">
+    <thead>
+      <tr><th>Type</th><th>Name</th><th>Notes</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for facility in basic_facilities %}
+        {{ facility_row(facility, facility_types.basic, "bastion-form-" ~ facility['id']) }}
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty-state">No Basic Facilities added yet.</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('bastion_facility_add') }}" class="bastion-add-form">
+  <input type="hidden" name="slot_category" value="Basic">
+  <button type="submit" class="btn">+ Add Basic Facility</button>
+</form>
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+<div class="section-heading"><span class="section-heading-mark"></span>Special Facilities<span class="section-heading-mark"></span></div>
+<p class="summary">
+  {% if special_facilities|length > special_slots_total %}
+    {{ special_facilities|length }} built, but Bastion level {{ bastion_level }} only unlocks {{ special_slots_total }} slot{{ '' if special_slots_total == 1 else 's' }} — nothing was deleted when the level changed, raise it back up (or remove some) to match.
+  {% elif special_slots_total == 0 %}
+    0 of 0 slots used — reach Bastion level 5 to unlock your first Special Facility slots.
+  {% else %}
+    {{ special_facilities|length }} of {{ special_slots_total }} slots used at Bastion level {{ bastion_level }}.
+  {% endif %}
+</p>
+
+{% for facility in special_facilities %}
+  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}"></form>
+{% endfor %}
+{% if special_facilities %}
+  <table class="related-table bastion-table">
+    <thead>
+      <tr><th>Type</th><th>Name</th><th>Order</th><th>Hirelings</th><th>Notes</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for facility in special_facilities %}
+        {{ facility_row(facility, available_special_types, "bastion-form-" ~ facility['id']) }}
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty-state">No Special Facilities yet — raise your Bastion's level to 5 or higher, then add your first slot below.</p>
+{% endif %}
+
+{% if special_facilities|length < special_slots_total %}
+  <form method="post" action="{{ url_for('bastion_facility_add') }}" class="bastion-add-form">
+    <input type="hidden" name="slot_category" value="Special">
+    <button type="submit" class="btn">+ Add Special Facility Slot</button>
+  </form>
+{% endif %}
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+<div class="section-heading"><span class="section-heading-mark"></span>Facility Types<span class="section-heading-mark"></span></div>
+<p class="summary">Rename or re-describe any official facility type here — the change applies everywhere that type is used, official 2024 DMG rules text stays visible below as a reference.</p>
+
+<div class="bastion-type-group">
+  <h3>Basic</h3>
+  {% for t in facility_types.basic %}
+    <form method="post" action="{{ url_for('bastion_facility_type_update', facility_key=t.key) }}" class="bastion-type-form">
+      <input type="text" name="custom_name" value="{{ t.name }}" class="loot-input bastion-type-name-input">
+      <input type="text" name="custom_description" value="{{ t.description }}" class="loot-input bastion-type-desc-input">
+      {% if t.official_name %}<span class="hint">official: {{ t.official_name }}</span>{% endif %}
+      <button type="submit" class="btn btn-sm">Save</button>
+    </form>
+  {% endfor %}
+</div>
+
+{% for tier in facility_level_tiers %}
+  <div class="bastion-type-group">
+    <h3>Special — Level {{ tier }}</h3>
+    {% for t in facility_types.special %}
+      {% if t.level == tier %}
+        <form method="post" action="{{ url_for('bastion_facility_type_update', facility_key=t.key) }}" class="bastion-type-form">
+          <input type="text" name="custom_name" value="{{ t.name }}" class="loot-input bastion-type-name-input">
+          <input type="text" name="custom_description" value="{{ t.description }}" class="loot-input bastion-type-desc-input">
+          {% if t.official_name %}<span class="hint">official: {{ t.official_name }}</span>{% endif %}
+          <button type="submit" class="btn btn-sm">Save</button>
+        </form>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endfor %}
+{% endblock %}

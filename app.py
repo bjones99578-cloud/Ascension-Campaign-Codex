@@ -5,6 +5,7 @@ import sys
 from flask import Flask, g, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
+import bastion
 import dndbeyond
 import images
 import models
@@ -227,9 +228,6 @@ def category_view(category):
     elif category == "Item":
         holders = models.get_entries_by_ids(conn, [e["current_holder_id"] for e in entries])
         related_names = {e["id"]: {"current_holder": holders.get(e["current_holder_id"])} for e in entries}
-    elif category == "Location":
-        orgs = models.get_entries_by_ids(conn, [e["controlling_org_id"] for e in entries])
-        related_names = {e["id"]: {"controlling_org": orgs.get(e["controlling_org_id"])} for e in entries}
 
     return render_template(
         "category.html",
@@ -297,7 +295,7 @@ def entry_detail(entry_id):
         # out into their own tables — populated both from the explicit Home
         # City / Headquarters City dropdowns and from [[City Name]] wiki-link
         # backlinks, merged and de-duplicated. Anything else that links here
-        # (a Location, an Item, another City) still shows up below as a
+        # (an Item, another City) still shows up below as a
         # general backlink so nothing gets lost. Characters are additionally
         # split into Party Members vs. everyone else for clarity, matching
         # the same split used on the Characters category page and City View.
@@ -340,18 +338,11 @@ def entry_detail(entry_id):
         members = [models.get_entry(conn, row["id"]) for row in member_stubs]
         party_members, npc_members = models.split_party_members(members)
 
-        location_stubs = models.merge_by_id(
-            models.get_locations_controlled_by(conn, entry_id),
-            [b for b in all_backlinks if b["category"] == "Location"],
-        )
-        controlled_locations = [models.get_entry(conn, row["id"]) for row in location_stubs]
-
         related = {
             "party_members": party_members,
             "npc_members": npc_members,
-            "controlled_locations": controlled_locations,
         }
-        backlinks = [b for b in all_backlinks if b["category"] not in ("Character", "Location")]
+        backlinks = [b for b in all_backlinks if b["category"] != "Character"]
     elif entry["category"] == "Region":
         city_stubs = models.merge_by_id(
             models.get_cities_in_region(conn, entry_id),
@@ -396,9 +387,6 @@ def entry_detail(entry_id):
     elif entry["category"] == "Item":
         if entry["current_holder_id"]:
             related_entities["current_holder"] = models.get_entry(conn, entry["current_holder_id"])
-    elif entry["category"] == "Location":
-        if entry["controlling_org_id"]:
-            related_entities["controlling_org"] = models.get_entry(conn, entry["controlling_org_id"])
 
     return render_template(
         "entry_detail.html",
@@ -431,7 +419,6 @@ def new_entry():
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
-        controlling_org_id = _parse_relationship_id(request.form.get("controlling_org"))
         pc_slot = _parse_pc_slot(conn, request.form)
         details = parse_detail_fields(request.form)
         _persist_custom_options(conn, details)
@@ -484,7 +471,7 @@ def new_entry():
             region_id=region_id, headquarters_city_id=headquarters_city_id,
             leader_id=leader_id, current_city_id=current_city_id,
             leading_organization_id=leading_organization_id,
-            current_holder_id=current_holder_id, controlling_org_id=controlling_org_id,
+            current_holder_id=current_holder_id,
             pc_slot=pc_slot,
             details=details,
         )
@@ -515,7 +502,6 @@ def new_entry():
             "current_city_id": None,
             "leading_organization_id": None,
             "current_holder_id": None,
-            "controlling_org_id": None,
             "pc_slot": prefill_slot,
             **prefill_details,
         },
@@ -560,8 +546,7 @@ def import_dndbeyond():
                         "current_city_id": None,
                         "leading_organization_id": None,
                         "current_holder_id": None,
-                        "controlling_org_id": None,
-                        "pc_slot": None,
+                                    "pc_slot": None,
                         **{**models.empty_details(), **fields.get("details", {})},
                     },
                     **relationship_options(get_conn()),
@@ -593,7 +578,6 @@ def edit_entry(entry_id):
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
-        controlling_org_id = _parse_relationship_id(request.form.get("controlling_org"))
         pc_slot = _parse_pc_slot(conn, request.form, ignore_entry_id=entry_id)
         details = parse_detail_fields(request.form)
         _persist_custom_options(conn, details)
@@ -625,7 +609,6 @@ def edit_entry(entry_id):
                     "current_city_id": current_city_id,
                     "leading_organization_id": leading_organization_id,
                     "current_holder_id": current_holder_id,
-                    "controlling_org_id": controlling_org_id,
                     "pc_slot": pc_slot,
                     **details,
                 },
@@ -643,7 +626,7 @@ def edit_entry(entry_id):
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
-                current_holder_id=current_holder_id, controlling_org_id=controlling_org_id,
+                current_holder_id=current_holder_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -656,7 +639,7 @@ def edit_entry(entry_id):
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
-                current_holder_id=current_holder_id, controlling_org_id=controlling_org_id,
+                current_holder_id=current_holder_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -667,7 +650,7 @@ def edit_entry(entry_id):
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
-                current_holder_id=current_holder_id, controlling_org_id=controlling_org_id,
+                current_holder_id=current_holder_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -694,7 +677,6 @@ def edit_entry(entry_id):
             "current_city_id": entry["current_city_id"],
             "leading_organization_id": entry["leading_organization_id"],
             "current_holder_id": entry["current_holder_id"],
-            "controlling_org_id": entry["controlling_org_id"],
             "pc_slot": entry["pc_slot"],
             **{col: entry[col] for col in models.DETAIL_COLUMNS},
         },
@@ -970,6 +952,118 @@ def loot_item_delete(item_id):
             images.delete_upload(entry["image_filename"])
         models.delete_entry(conn, item_id)
     return redirect(url_for("loot_tracker"))
+
+
+@app.route("/bastion")
+def bastion_page():
+    """The party's shared Bastion (their floating cloud ship) -- a level
+    setting drives how many Special Facility slots are unlocked (2 at
+    level 5, 4 at 9, 5 at 13, 6 at 17, per the DMG), each slot lets you pick
+    an official facility type (or a wholly custom homebrew one) and name
+    the built instance, and there's a reference/rename section for
+    retheming the official facility types themselves. No live D&D Beyond
+    source exists for any of this (see bastion.py's own docstring) -- it's
+    all hand-entered 2024 DMG rules text plus whatever the party overrides."""
+    conn = get_conn()
+    level = int(models.get_setting(conn, "bastion_level", "5") or 5)
+    name = models.get_setting(conn, "bastion_name", "") or ""
+    basic_facilities = models.get_bastion_facilities(conn, "Basic")
+    special_facilities = models.get_bastion_facilities(conn, "Special")
+    facility_types = bastion.merged_facility_types(conn)
+    available_special = [f for f in facility_types["special"] if f["level"] <= level]
+    facility_types_by_key = {f["key"]: f for f in facility_types["basic"] + facility_types["special"]}
+    return render_template(
+        "bastion.html",
+        bastion_level=level,
+        bastion_name=name,
+        basic_facilities=basic_facilities,
+        special_facilities=special_facilities,
+        facility_types=facility_types,
+        facility_types_by_key=facility_types_by_key,
+        available_special_types=available_special,
+        special_slots_total=bastion.special_slot_count(level),
+        order_options=bastion.ORDER_OPTIONS,
+        facility_level_tiers=bastion.FACILITY_LEVEL_TIERS,
+    )
+
+
+@app.route("/bastion/settings", methods=["POST"])
+def bastion_settings_update():
+    conn = get_conn()
+    name = request.form.get("bastion_name", "").strip()
+    level = request.form.get("bastion_level", type=int) or 1
+    level = max(1, min(20, level))
+    models.set_setting(conn, "bastion_name", name)
+    models.set_setting(conn, "bastion_level", str(level))
+    return redirect(url_for("bastion_page"))
+
+
+@app.route("/bastion/facilities", methods=["POST"])
+def bastion_facility_add():
+    """Adds one fresh, still-unpicked slot -- Basic slots are unrestricted
+    (the DMG doesn't level-gate buying more of these), Special slots are
+    capped to whatever the current Bastion level allows, matching the
+    dropdown's own filtering rather than trusting the client not to have
+    hidden a maxed-out "+ Add" button."""
+    conn = get_conn()
+    slot_category = request.form.get("slot_category")
+    if slot_category not in ("Basic", "Special"):
+        return redirect(url_for("bastion_page"))
+    if slot_category == "Special":
+        level = int(models.get_setting(conn, "bastion_level", "5") or 5)
+        existing = len(models.get_bastion_facilities(conn, "Special"))
+        if existing >= bastion.special_slot_count(level):
+            return redirect(url_for("bastion_page"))
+    models.add_bastion_facility(conn, slot_category)
+    return redirect(url_for("bastion_page"))
+
+
+@app.route("/bastion/facilities/<int:facility_id>/update", methods=["POST"])
+def bastion_facility_update(facility_id):
+    conn = get_conn()
+    facility = models.get_bastion_facility(conn, facility_id)
+    if not facility:
+        return redirect(url_for("bastion_page"))
+
+    facility_key = (request.form.get("facility_key") or "").strip() or None
+    custom_type_name = (request.form.get("custom_type_name") or "").strip() or None
+    if facility_key == "__custom__":
+        facility_key = None
+    else:
+        custom_type_name = None
+    instance_name = (request.form.get("instance_name") or "").strip() or None
+    current_order = (request.form.get("current_order") or "").strip() or None
+    hirelings = (request.form.get("hirelings") or "").strip() or None
+    notes = (request.form.get("notes") or "").strip() or None
+
+    models.update_bastion_facility(
+        conn, facility_id, facility_key, custom_type_name, instance_name,
+        current_order, hirelings, notes,
+    )
+    return redirect(url_for("bastion_page"))
+
+
+@app.route("/bastion/facilities/<int:facility_id>/delete", methods=["POST"])
+def bastion_facility_delete(facility_id):
+    conn = get_conn()
+    models.delete_bastion_facility(conn, facility_id)
+    return redirect(url_for("bastion_page"))
+
+
+@app.route("/bastion/facility-types/<facility_key>/update", methods=["POST"])
+def bastion_facility_type_update(facility_key):
+    """Renames/re-describes an official facility TYPE for the whole party --
+    e.g. retheming "Arcane Study" into "The Sky Loom" for a homebrew
+    airship. Affects every slot using that type, not just one instance."""
+    conn = get_conn()
+    if facility_key not in bastion.ALL_BY_KEY:
+        return redirect(url_for("bastion_page"))
+    models.set_bastion_facility_type_override(
+        conn, facility_key,
+        request.form.get("custom_name", ""),
+        request.form.get("custom_description", ""),
+    )
+    return redirect(url_for("bastion_page"))
 
 
 @app.route("/timeline")

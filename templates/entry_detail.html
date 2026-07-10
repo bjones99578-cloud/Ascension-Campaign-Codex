@@ -106,30 +106,6 @@
   </div>
 {% endmacro %}
 
-{% macro location_table(title, rows, empty_hint) %}
-  <div class="related-block">
-    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
-    {% if rows %}
-      <table class="related-table">
-        <thead>
-          <tr><th>Name</th><th>Type</th><th>Danger Level</th></tr>
-        </thead>
-        <tbody>
-          {% for loc in rows %}
-            <tr>
-              <td><a href="{{ url_for('entry_detail', entry_id=loc['id']) }}">{{ loc['name'] }}</a></td>
-              <td>{{ loc['location_type'] or '—' }}</td>
-              <td>{{ loc['danger_level'] or '—' }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p class="empty-state">{{ empty_hint }}</p>
-    {% endif %}
-  </div>
-{% endmacro %}
-
 {% macro city_table(title, rows, empty_hint) %}
   <div class="related-block">
     <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
@@ -223,9 +199,6 @@
       {% if related_entities.current_holder %}
         <span><span class="relation-label">Carried by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.current_holder['id']) }}">{{ related_entities.current_holder['name'] }}</a></span>
       {% endif %}
-      {% if related_entities.controlling_org %}
-        <span><span class="relation-label">Controlled by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.controlling_org['id']) }}">{{ related_entities.controlling_org['name'] }}</a></span>
-      {% endif %}
     </div>
   {% endif %}
 
@@ -254,8 +227,6 @@
           "No party members belong to this organization yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
       {{ character_table("Other Members", related.npc_members,
           "No other members yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
-      {{ location_table("Controlled Locations", related.controlled_locations,
-          "No locations yet — add [[" ~ entry['name'] ~ "]] to a location's entry, or set it as their Controlling Organization, to list it here.") }}
     {% elif related.cities_display is defined %}
       {{ city_table("Cities in this Region", related.cities_display,
           "No cities yet — add [[" ~ entry['name'] ~ "]] to a city's entry, or set it as their Region, to list it here.") }}

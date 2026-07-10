@@ -44,7 +44,7 @@
 .cat-city         { --cat-color: #a9782f; --cat-light: #8a5f18; --cat-glow: rgba(169, 120, 47, 0.28); }
 .cat-character    { --cat-color: #6b4ba1; --cat-light: #56398a; --cat-glow: rgba(107, 75, 161, 0.28); }
 .cat-organization { --cat-color: #9c3b4f; --cat-light: #7d2c3d; --cat-glow: rgba(156, 59, 79, 0.28); }
-.cat-location     { --cat-color: #1f7a72; --cat-light: #145f58; --cat-glow: rgba(31, 122, 114, 0.28); }
+.cat-bastion      { --cat-color: #1f7a72; --cat-light: #145f58; --cat-glow: rgba(31, 122, 114, 0.28); }
 .cat-item         { --cat-color: #a8611f; --cat-light: #8a4d16; --cat-glow: rgba(168, 97, 31, 0.28); }
 .cat-quest        { --cat-color: #4b4a9c; --cat-light: #38377a; --cat-glow: rgba(75, 74, 156, 0.28); }
 .cat-sessionlog   { --cat-color: #6b5842; --cat-light: #52412f; --cat-glow: rgba(107, 88, 66, 0.28); }
@@ -888,6 +888,41 @@ code {
 .loot-delete-form { display: inline; }
 
 .btn-sm { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
+
+/* ---------- bastion ---------- */
+
+.bastion-table td { vertical-align: middle; }
+.bastion-input-custom-type { display: block; margin-top: 0.35rem; width: 100%; min-width: 10rem; }
+.bastion-table td:first-child { min-width: 11rem; }
+.bastion-input-notes { min-width: 10rem; }
+/* The read-only rules-text line under each built facility row -- shown as
+   its own full-width table row (spanning every column) rather than a cell,
+   since the description is prose, not tabular data. */
+.bastion-description-row td {
+  border-top: none;
+  padding-top: 0;
+  padding-bottom: 0.75rem;
+  background: none;
+}
+.bastion-description { font-style: italic; color: var(--text-muted); font-size: 0.88rem; }
+.bastion-add-form { margin: 0.75rem 0 0; }
+
+/* The Facility Types reference/rename section: one compact row per
+   official facility, name + description inputs side by side so renaming
+   for a homebrew theme is a single edit-and-Save rather than a detour to
+   a separate settings page. */
+.bastion-type-group { margin-bottom: 1.5rem; }
+.bastion-type-group h3 { font-family: var(--font-heading); color: var(--cat-light); margin-bottom: 0.6rem; }
+.bastion-type-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.bastion-type-name-input { width: 14rem; font-weight: bold; }
+.bastion-type-desc-input { flex: 1; min-width: 16rem; }
 
 /* ---------- timeline ---------- */
 
