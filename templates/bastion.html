@@ -50,6 +50,22 @@
       </td>
     </tr>
   {% endif %}
+  <tr class="bastion-image-row">
+    <td colspan="{{ 6 if facility['slot_category'] == 'Special' else 4 }}">
+      <div class="bastion-image-block">
+        {% if facility['image_filename'] %}
+          <div class="current-image">
+            <img src="{{ url_for('uploaded_file', filename=facility['image_filename']) }}" alt="">
+            <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
+              <input type="checkbox" name="remove_image" value="1" form="{{ form_id }}" style="width: auto;">
+              Remove this image
+            </label>
+          </div>
+        {% endif %}
+        <input type="file" name="image" form="{{ form_id }}" accept="image/png, image/jpeg, image/gif, image/webp" class="bastion-image-input">
+      </div>
+    </td>
+  </tr>
   {% if facility['slot_category'] == 'Special' %}
     {% set flist = facility_projects.get(facility['id'], []) %}
     <tr class="bastion-project-row">
@@ -76,7 +92,11 @@
   <p class="summary">The crew's shared floating stronghold. Set your Bastion's level to unlock Special Facility slots (2 at level 5, 4 at 9, 5 at 13, 6 at 17), pick a facility for each slot, and rename anything to fit your homebrew airship.</p>
 </div>
 
-<form class="entry-form search-filters-form" method="post" action="{{ url_for('bastion_settings_update') }}">
+{% if bastion_image_filename %}
+  <img class="entry-portrait" src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="{{ bastion_name or 'The Bastion' }}">
+{% endif %}
+
+<form class="entry-form search-filters-form" method="post" action="{{ url_for('bastion_settings_update') }}" enctype="multipart/form-data">
   <label>
     Bastion name
     <input type="text" name="bastion_name" value="{{ bastion_name }}" placeholder="e.g. The Windrunner">
@@ -84,6 +104,19 @@
   <label>
     Bastion level
     <input type="number" name="bastion_level" min="1" max="20" value="{{ bastion_level }}" style="width: 5rem;">
+  </label>
+  <label>
+    Picture <span class="hint">(a painting/photo of the ship itself — optional)</span>
+    {% if bastion_image_filename %}
+      <div class="current-image">
+        <img src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="">
+        <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
+          <input type="checkbox" name="remove_image" value="1" style="width: auto;">
+          Remove this image
+        </label>
+      </div>
+    {% endif %}
+    <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp">
   </label>
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Save</button>
@@ -96,7 +129,7 @@
 <p class="summary">Free, flavor-only rooms — no Orders or hirelings, just roleplay. Add as many as you like.</p>
 
 {% for facility in basic_facilities %}
-  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}"></form>
+  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}" enctype="multipart/form-data"></form>
 {% endfor %}
 {% if basic_facilities %}
   <table class="related-table bastion-table">
@@ -132,7 +165,7 @@
 </p>
 
 {% for facility in special_facilities %}
-  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}"></form>
+  <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}" enctype="multipart/form-data"></form>
 {% endfor %}
 {% if special_facilities %}
   <table class="related-table bastion-table">

@@ -500,6 +500,7 @@ def init_db():
             current_order TEXT,
             hirelings TEXT,
             notes TEXT,
+            image_filename TEXT,
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL
         );
@@ -587,6 +588,11 @@ def init_db():
     # CREATE TABLE IF NOT EXISTS, which no-ops against an existing table) is
     # what actually adds it, so this index creation must come after it.
     conn.execute("CREATE INDEX IF NOT EXISTS idx_map_pin_map ON map_pin (map_id)")
+    # Same approach for bastion_facility: databases from before per-facility
+    # pictures existed won't have this column yet.
+    existing_facility_cols = {row["name"] for row in conn.execute("PRAGMA table_info(bastion_facility)")}
+    if "image_filename" not in existing_facility_cols:
+        conn.execute("ALTER TABLE bastion_facility ADD COLUMN image_filename TEXT")
     conn.commit()
 
     # One-time backfill for databases from before multi-map support: they have
@@ -1178,9 +1184,24 @@ def update_bastion_facility(conn, facility_id, facility_key, custom_type_name, i
     conn.commit()
 
 
+def set_bastion_facility_image(conn, facility_id, filename):
+    conn.execute("UPDATE bastion_facility SET image_filename = ? WHERE id = ?", (filename, facility_id))
+    conn.commit()
+
+
+def clear_bastion_facility_image(conn, facility_id):
+    conn.execute("UPDATE bastion_facility SET image_filename = NULL WHERE id = ?", (facility_id,))
+    conn.commit()
+
+
 def delete_bastion_facility(conn, facility_id):
+    """Deletes a facility row. Returns its image filename (or None) so the
+    caller can also delete the uploaded file -- same split between "remove
+    the DB row" and "remove the uploaded file" as delete_map/delete_entry."""
+    row = get_bastion_facility(conn, facility_id)
     conn.execute("DELETE FROM bastion_facility WHERE id = ?", (facility_id,))
     conn.commit()
+    return row["image_filename"] if row else None
 
 
 def set_bastion_facility_type_override(conn, facility_key, custom_name, custom_description):

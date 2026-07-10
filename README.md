@@ -200,6 +200,17 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
     Study" to "The Sky Loom" everywhere it's used, party-wide) — the
     original 2024 DMG name stays visible alongside as "official: ..." so you
     never lose track of which real rules a homebrew name maps back to.
+  - **Pictures**: the Bastion itself can have one picture (a painting or
+    render of the ship, shown right at the top of the page like a City's own
+    picture), and separately, every individual built facility — Basic or
+    Special — can have its own picture too (what "The Sky Loom" actually
+    looks like on your ship). Upload or replace either right where you'd
+    expect: the Bastion's own image lives in the settings box up top, and a
+    facility's image lives right in that facility's own row. Both go through
+    the exact same downscale-and-recompress pipeline as every other picture
+    in the app (see "Pictures" further down) — deleting a facility, or
+    swapping in a new picture for one, also cleans up the old file on disk
+    rather than leaving it behind.
   - **Non-destructive level changes**: lowering the Bastion level below the
     number of Special Facilities you've already built never deletes
     anything — it just flags that you're over the currently-unlocked slot
@@ -279,14 +290,19 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   name" field on each entry so people can see who wrote or last touched it.
 - **Pictures**: any entry can have an image attached (a character portrait,
   city art, an item illustration) — add one when creating or editing an entry.
-  Every upload is automatically downscaled (to 2048px on its longest edge)
-  and recompressed on the way in, so a multi-MB phone photo becomes a few
-  hundred KB with no visible quality loss in how the app actually displays
-  it — this stretches however much disk space your hosting plan gives you
-  much further as the party uploads images over a campaign's lifetime.
-  Animated GIFs are left untouched (resizing would flatten the animation),
-  and anything with real transparency is kept as a PNG; everything else is
-  saved as JPEG for a smaller file size.
+  The Bastion and its individual facilities use this exact same pipeline too
+  (see the Bastion section above), even though they're not "entries" in the
+  wiki sense. Every upload is automatically downscaled (to 2048px on its
+  longest edge) and recompressed on the way in, so a multi-MB phone photo
+  becomes a few hundred KB with no visible quality loss in how the app
+  actually displays it — this stretches however much disk space your
+  hosting plan gives you much further as the party uploads images over a
+  campaign's lifetime. Animated GIFs are left untouched (resizing would
+  flatten the animation), and anything with real transparency is kept as a
+  PNG; everything else is saved as JPEG for a smaller file size. Deleting
+  anything with a picture — an entry, a facility, a map — deletes its
+  uploaded file from disk too, so removed pictures don't quietly pile up
+  and eat into your storage quota over time.
 - **World Map (multiple maps)**: the "Map" link in the nav holds as many maps
   as the party needs — a World Map, a city street-map, a dungeon layout,
   whatever scale is useful — each with its own image and its own independent

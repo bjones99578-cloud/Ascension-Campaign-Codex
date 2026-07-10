@@ -976,6 +976,7 @@ def bastion_page():
     conn = get_conn()
     level = int(models.get_setting(conn, "bastion_level", "5") or 5)
     name = models.get_setting(conn, "bastion_name", "") or ""
+    image_filename = models.get_setting(conn, "bastion_image_filename", "") or None
     basic_facilities = models.get_bastion_facilities(conn, "Basic")
     special_facilities = models.get_bastion_facilities(conn, "Special")
     facility_types = bastion.merged_facility_types(conn)
@@ -991,6 +992,7 @@ def bastion_page():
         "bastion.html",
         bastion_level=level,
         bastion_name=name,
+        bastion_image_filename=image_filename,
         basic_facilities=basic_facilities,
         special_facilities=special_facilities,
         facility_types=facility_types,
@@ -1011,6 +1013,22 @@ def bastion_settings_update():
     level = max(1, min(20, level))
     models.set_setting(conn, "bastion_name", name)
     models.set_setting(conn, "bastion_level", str(level))
+
+    # A picture of the ship/stronghold as a whole -- stored the same way as
+    # its name/level (the "setting" key/value table) rather than a whole
+    # new column, since there's only ever one Bastion. Same
+    # upload-replaces-old-file / remove-checkbox-clears-it pattern as every
+    # other image in the app (see images.py, entry edit, map upload).
+    existing_image = models.get_setting(conn, "bastion_image_filename", "") or None
+    new_image_filename = images.save_upload(request.files.get("image"))
+    if new_image_filename:
+        if existing_image:
+            images.delete_upload(existing_image)
+        models.set_setting(conn, "bastion_image_filename", new_image_filename)
+    elif request.form.get("remove_image") == "1" and existing_image:
+        images.delete_upload(existing_image)
+        models.set_setting(conn, "bastion_image_filename", "")
+
     return redirect(url_for("bastion_page"))
 
 
@@ -1056,13 +1074,28 @@ def bastion_facility_update(facility_id):
         conn, facility_id, facility_key, custom_type_name, instance_name,
         current_order, hirelings, notes,
     )
+
+    # A picture of this one built facility (e.g. what "The Sky Loom" looks
+    # like) -- same upload-replaces-old-file / remove-checkbox pattern as
+    # the Bastion's own image and every entry's portrait.
+    new_image_filename = images.save_upload(request.files.get("image"))
+    if new_image_filename:
+        if facility["image_filename"]:
+            images.delete_upload(facility["image_filename"])
+        models.set_bastion_facility_image(conn, facility_id, new_image_filename)
+    elif request.form.get("remove_image") == "1" and facility["image_filename"]:
+        images.delete_upload(facility["image_filename"])
+        models.clear_bastion_facility_image(conn, facility_id)
+
     return redirect(url_for("bastion_page"))
 
 
 @app.route("/bastion/facilities/<int:facility_id>/delete", methods=["POST"])
 def bastion_facility_delete(facility_id):
     conn = get_conn()
-    models.delete_bastion_facility(conn, facility_id)
+    image_filename = models.delete_bastion_facility(conn, facility_id)
+    if image_filename:
+        images.delete_upload(image_filename)
     return redirect(url_for("bastion_page"))
 
 
