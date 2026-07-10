@@ -862,6 +862,33 @@ code {
 .loot-row-history { opacity: 0.6; }
 .loot-row-history td { text-decoration: line-through; text-decoration-color: var(--text-muted); }
 
+/* The quick "+ Add Item" bar reuses .search-filters-form's compact
+   horizontal layout, just under its own name so a loot-specific tweak
+   doesn't ripple into the Search page. */
+.loot-add-form { margin-bottom: 0.5rem; }
+
+/* Every cell in an editable loot row holds its own input/select (each one
+   pointing at that row's own <form> via the HTML "form" attribute, since a
+   <form> element can't validly wrap a <tr> itself) -- sized to sit
+   comfortably inside a table cell rather than a full-width form field. */
+.loot-table td { vertical-align: middle; }
+.loot-input, .loot-table select {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+.loot-input-name { min-width: 12rem; font-weight: bold; }
+.loot-input-narrow { width: 5rem; }
+.loot-row-actions { white-space: nowrap; display: flex; gap: 0.4rem; align-items: center; }
+.loot-delete-form { display: inline; }
+
+.btn-sm { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
+
 /* ---------- timeline ---------- */
 
 .timeline {

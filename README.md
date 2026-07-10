@@ -66,9 +66,10 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
     Hostile — toward the party, same field City uses)
   - **Region**: Terrain, Climate
   - **Location**: Location Type, Danger Level
-  - **Item**: Item Type, Rarity, Requires Attunement, Estimated Value (gp),
-    Status (In Possession / Sold / Given Away / Used-Consumed / Destroyed /
-    Lost)
+  - **Item**: Item Type, Rarity, Requires Attunement, Quantity (how many of
+    this item are in the stack — Estimated Value is still the total for the
+    whole stack, not a per-unit price), Estimated Value (gp), Status (In
+    Possession / Sold / Given Away / Used-Consumed / Destroyed / Lost)
   - **Quest**: Status, Difficulty (Easy / Medium / Hard / Deadly), Level
     Range, Quest Giver, Reward, XP Reward, Gold Reward
 
@@ -155,18 +156,22 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   green, a Wizard's glows arcane blue, a Paladin's glows radiant gold, and so
   on for all twelve core classes. "Remove from Roster" just frees the slot —
   it never deletes the character entry itself.
-- **Loot Tracker**: the "Loot Tracker" link in the nav is a shared party
-  inventory view, one level up from browsing Items one at a time. Every Item
-  with a **Current Holder** set to a Party Member shows up under that
-  character's own "Haul" table; anything held by an NPC lands in its own
-  "Held by Others" section; anything with no Current Holder at all shows up
-  as "Unclaimed". A **Party Treasury** total at the top adds up the
-  Estimated Value of everything currently marked **Status: In Possession**
-  across the party's hauls and the unclaimed pile — items marked Sold, Given
-  Away, Used/Consumed, Destroyed, or Lost still show up (struck through) for
-  the historical record, but drop out of that total, so the number at the
-  top always reflects what the party could actually spend or trade right
-  now.
+- **Loot Tracker**: the "Loot Tracker" link in the nav is strictly the
+  party's SHARED stash — items a specific Character is personally carrying
+  (Current Holder set) live on that Character's own page instead, not here,
+  so this list stays focused on the communal pile. Every row is editable
+  right on the page: change its Type/Quantity/Rarity/Value/Status and hit
+  Save, no trip through the full Entry form needed for routine updates —
+  there's also a quick "+ Add Item" bar at the top for logging something new
+  the party just found, and a Delete button per row for removing a mistaken
+  entry entirely. A **Party Treasury** total up top adds up the Estimated
+  Value of everything currently marked **Status: In Possession** — items
+  marked Sold, Given Away, Used/Consumed, Destroyed, or Lost still show up
+  (struck through) for the historical record, but drop out of that total, so
+  the number always reflects what the party could actually spend or trade
+  right now. An item stops showing up here the moment somebody sets its
+  Current Holder field (on the full Entry form) — clear that field again to
+  move it back into the shared stash.
 - **Timeline**: the "Timeline" link in the nav is the campaign's story so
   far as a single chronological feed — every Session Log entry in play
   order (earliest first), each showing its Session #, Session Date,

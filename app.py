@@ -855,54 +855,121 @@ def reference():
     return render_template("reference.html", species=species, classes=classes)
 
 
+def _loot_field_options(conn):
+    """Just the option lists the Loot Tracker's inline-editable rows need
+    (Item Type / Rarity / Status), including any custom values the party
+    has typed in elsewhere via "+ Add new option...", keyed by field name
+    for easy lookup in the template."""
+    item_fields = models.merged_detail_fields(conn)["Item"]
+    return {f["name"]: f["options"] for f in item_fields if f["type"] == "select"}
+
+
 @app.route("/loot")
 def loot_tracker():
-    """A shared party inventory view, one level up from a single Item's own
-    page: every Item grouped by who's currently holding it -- each Party
-    Member's own haul, everything sitting with an NPC instead, and anything
-    unclaimed (no Current Holder set) -- plus a running gold total for
-    what's actually still in the party's hands. Only items marked "In
-    Possession" (or left with no Status at all, e.g. before this field
-    existed) count toward that total; Sold/Given Away/Used/Destroyed/Lost
-    items still show up, but as history rather than current wealth."""
+    """The party's SHARED stash only -- every Item with no Current Holder
+    set, editable right on this page (quick-add a new item, or update an
+    existing row's Type/Quantity/Rarity/Value/Status and save it) without
+    detouring through the full Entry form. An item assigned to a specific
+    Character or NPC is that individual's own belonging, not party loot, so
+    it drops off this list the moment a Current Holder is set on it (it's
+    still viewable/editable on its own entry page, and on that holder's
+    "Carried Items" list). Only items marked "In Possession" (or left with
+    no Status at all, e.g. before this field existed) count toward the
+    running gold total; Sold/Given Away/Used/Destroyed/Lost items still
+    show up, but as history rather than current wealth."""
     conn = get_conn()
-    items = models.get_all_items_with_holders(conn)
-    party_members = models.get_player_characters(conn)
-
-    # Note: dict keys here are deliberately NOT "items" -- Jinja's attribute
-    # lookup on a plain dict finds the real dict.items() method before it
-    # falls back to key access, so "group.items" in a template would silently
-    # resolve to that bound method instead of our list. "entries" sidesteps
-    # the collision entirely.
-    party_groups = {pc["id"]: {"holder": pc, "entries": []} for pc in party_members}
-    other_groups = {}
-    unclaimed = []
-    total_value = 0
-
-    for item in items:
-        in_possession = item["item_status"] in (None, "", "In Possession")
-        if item["current_holder_id"] and item["current_holder_id"] in party_groups:
-            party_groups[item["current_holder_id"]]["entries"].append(item)
-            if in_possession:
-                total_value += item["estimated_value"] or 0
-        elif item["current_holder_id"]:
-            group = other_groups.setdefault(
-                item["current_holder_id"],
-                {"holder_name": item["holder_name"], "entries": []},
-            )
-            group["entries"].append(item)
-        else:
-            unclaimed.append(item)
-            if in_possession:
-                total_value += item["estimated_value"] or 0
-
+    items = models.get_shared_loot_items(conn)
+    total_value = sum(
+        item["estimated_value"] or 0
+        for item in items
+        if item["item_status"] in (None, "", "In Possession")
+    )
     return render_template(
         "loot.html",
-        party_groups=list(party_groups.values()),
-        other_groups=list(other_groups.values()),
-        unclaimed=unclaimed,
+        items=items,
         total_value=total_value,
+        field_options=_loot_field_options(conn),
+        error=request.args.get("error"),
     )
+
+
+@app.route("/loot/items", methods=["POST"])
+def loot_item_add():
+    """The Loot Tracker's own "+ Add Item" row -- creates a brand-new shared
+    Item entry (no Current Holder, so it shows up in the list immediately)
+    without going through the full New Entry form. Falls back to that full
+    form via the name-collision error message's own wording, same as the
+    main New Entry flow, for anything this quick form can't resolve."""
+    conn = get_conn()
+    name = request.form.get("name", "").strip()
+    if not name:
+        return redirect(url_for("loot_tracker", error="Give the new item a name."))
+    if models.find_entry_by_name(conn, name):
+        return redirect(url_for("loot_tracker", error=f'An entry named "{name}" already exists.'))
+
+    item_type = (request.form.get("item_type") or "").strip() or None
+    rarity = (request.form.get("rarity") or "").strip() or None
+    item_status = (request.form.get("item_status") or "").strip() or None
+    quantity = request.form.get("quantity", type=int) or 1
+    estimated_value = request.form.get("estimated_value", type=int)
+
+    for field_name, value in (("item_type", item_type), ("rarity", rarity), ("item_status", item_status)):
+        models.add_custom_option(conn, field_name, value)
+
+    models.create_entry(
+        conn, name, "Item", "", "", session.get("display_name", ""),
+        details={
+            **models.empty_details(),
+            "item_type": item_type,
+            "rarity": rarity,
+            "item_status": item_status,
+            "quantity": quantity,
+            "estimated_value": estimated_value,
+        },
+    )
+    return redirect(url_for("loot_tracker"))
+
+
+@app.route("/loot/items/<int:item_id>/update", methods=["POST"])
+def loot_item_update(item_id):
+    """Saves one inline-editable Loot Tracker row. Scoped to Items only (via
+    models.update_item_loot_fields' own WHERE clause) so posting a stray/
+    tampered id for some other category's entry can't touch it."""
+    conn = get_conn()
+    entry = models.get_entry(conn, item_id)
+    if not entry or entry["category"] != "Item":
+        return redirect(url_for("loot_tracker"))
+
+    name = request.form.get("name", "").strip() or entry["name"]
+    existing = models.find_entry_by_name(conn, name)
+    if existing and existing["id"] != item_id:
+        return redirect(url_for("loot_tracker", error=f'An entry named "{name}" already exists.'))
+
+    item_type = (request.form.get("item_type") or "").strip() or None
+    rarity = (request.form.get("rarity") or "").strip() or None
+    item_status = (request.form.get("item_status") or "").strip() or None
+    quantity = request.form.get("quantity", type=int) or 1
+    estimated_value = request.form.get("estimated_value", type=int)
+
+    for field_name, value in (("item_type", item_type), ("rarity", rarity), ("item_status", item_status)):
+        models.add_custom_option(conn, field_name, value)
+
+    models.update_item_loot_fields(conn, item_id, name, item_type, quantity, rarity, estimated_value, item_status)
+    return redirect(url_for("loot_tracker"))
+
+
+@app.route("/loot/items/<int:item_id>/delete", methods=["POST"])
+def loot_item_delete(item_id):
+    """A Loot Tracker-scoped delete that redirects back here instead of to
+    the homepage (unlike the generic entry-delete route), so removing a
+    row doesn't bounce you away from the page you were editing."""
+    conn = get_conn()
+    entry = models.get_entry(conn, item_id)
+    if entry and entry["category"] == "Item":
+        if entry["image_filename"]:
+            images.delete_upload(entry["image_filename"])
+        models.delete_entry(conn, item_id)
+    return redirect(url_for("loot_tracker"))
 
 
 @app.route("/timeline")

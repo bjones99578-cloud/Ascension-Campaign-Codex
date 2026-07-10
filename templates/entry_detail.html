@@ -86,13 +86,14 @@
     {% if rows %}
       <table class="related-table">
         <thead>
-          <tr><th>Name</th><th>Type</th><th>Rarity</th><th>Value (gp)</th></tr>
+          <tr><th>Name</th><th>Type</th><th>Qty</th><th>Rarity</th><th>Value (gp)</th></tr>
         </thead>
         <tbody>
           {% for item in rows %}
             <tr>
               <td><a href="{{ url_for('entry_detail', entry_id=item['id']) }}">{{ item['name'] }}</a></td>
               <td>{{ item['item_type'] or '—' }}</td>
+              <td>{{ item['quantity'] if item['quantity'] is not none else 1 }}</td>
               <td>{{ item['rarity'] or '—' }}</td>
               <td>{{ item['estimated_value'] or '—' }}</td>
             </tr>

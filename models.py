@@ -298,6 +298,12 @@ DETAIL_FIELDS = {
         {"name": "item_type", "label": "Item Type", "type": "select", "options": ITEM_TYPE_OPTIONS},
         {"name": "rarity", "label": "Rarity", "type": "select", "options": RARITY_OPTIONS},
         {"name": "requires_attunement", "label": "Requires Attunement", "type": "select", "options": ATTUNEMENT_OPTIONS},
+        # How many of this item the party has as one stack (12 torches, 340
+        # gp, etc.) rather than needing a separate Item entry per unit.
+        # Estimated Value below is still the TOTAL for the whole stack, not
+        # a per-unit price, so the Loot Tracker's running treasury total
+        # doesn't need to multiply the two together.
+        {"name": "quantity", "label": "Quantity", "type": "number", "min": 0},
         {"name": "estimated_value", "label": "Estimated Value (gp)", "type": "number", "min": 0},
         {"name": "item_status", "label": "Status", "type": "select", "options": ITEM_STATUS_OPTIONS},
     ],
@@ -332,7 +338,7 @@ DETAIL_COLUMNS = sorted({f["name"] for fields in DETAIL_FIELDS.values() for f in
 # Columns that store a number rather than text.
 DETAIL_INT_COLUMNS = {
     "level", "population", "armor_class", "hit_points", "speed", "passive_perception",
-    "estimated_value", "xp_reward", "gold_reward", "session_number",
+    "estimated_value", "xp_reward", "gold_reward", "session_number", "quantity",
 }
 
 # field name -> its built-in option list, used to tell a genuinely new custom
@@ -1061,20 +1067,38 @@ def get_outgoing_links(conn, entry_id):
     ).fetchall()
 
 
-def get_all_items_with_holders(conn):
-    """Every Item, joined with its Current Holder's name and Party Member
-    flag in one query -- the Loot Tracker page groups this single result set
-    into Party-held / Other-held / Unclaimed sections rather than issuing a
-    separate query per holder."""
+def get_shared_loot_items(conn):
+    """Every Item with no Current Holder set -- the party's shared stash,
+    as opposed to something a specific Character or NPC is personally
+    carrying (that still shows up on that character's own "Carried Items"
+    list, just not here). The Loot Tracker page is strictly this shared
+    pool now, so items get excluded the moment somebody's Current Holder
+    field is set on them, and reappear here the moment it's cleared."""
     return conn.execute(
         """
-        SELECT entry.*, holder.name AS holder_name, holder.is_player_character AS holder_is_pc
-        FROM entry
-        LEFT JOIN entry holder ON holder.id = entry.current_holder_id
-        WHERE entry.category = 'Item'
-        ORDER BY entry.name COLLATE NOCASE ASC
+        SELECT * FROM entry
+        WHERE category = 'Item' AND current_holder_id IS NULL
+        ORDER BY name COLLATE NOCASE ASC
         """
     ).fetchall()
+
+
+def update_item_loot_fields(conn, entry_id, name, item_type, quantity, rarity, estimated_value, item_status):
+    """A narrow, Loot-Tracker-specific update touching only the fields its
+    inline-editable row exposes (name + the five quick-edit columns) --
+    deliberately does NOT touch content, image, current_holder_id,
+    requires_attunement, or any relationship column, so a quick save from
+    the Loot Tracker table can't accidentally blank out something the full
+    Entry Edit form would normally carry back in as a hidden field."""
+    conn.execute(
+        """
+        UPDATE entry
+        SET name = ?, item_type = ?, quantity = ?, rarity = ?, estimated_value = ?, item_status = ?, updated_at = ?
+        WHERE id = ? AND category = 'Item'
+        """,
+        (name, item_type, quantity, rarity, estimated_value, item_status, now_iso(), entry_id),
+    )
+    conn.commit()
 
 
 def get_player_characters(conn):

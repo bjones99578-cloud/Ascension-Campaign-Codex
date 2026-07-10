@@ -135,7 +135,7 @@
   {% elif category == "Item" %}
     <table class="related-table entry-data-table">
       <thead>
-        <tr><th>Name</th><th>Type</th><th>Rarity</th><th>Attunement</th><th>Current Holder</th><th>Value (gp)</th><th>Summary</th></tr>
+        <tr><th>Name</th><th>Type</th><th>Qty</th><th>Rarity</th><th>Attunement</th><th>Current Holder</th><th>Value (gp)</th><th>Summary</th></tr>
       </thead>
       <tbody>
         {% for e in entries %}
@@ -143,6 +143,7 @@
           <tr>
             <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
             <td>{{ e['item_type'] or '—' }}</td>
+            <td>{{ e['quantity'] if e['quantity'] is not none else 1 }}</td>
             <td>{{ e['rarity'] or '—' }}</td>
             <td>{{ e['requires_attunement'] or '—' }}</td>
             <td>{% if names.current_holder %}<a href="{{ url_for('entry_detail', entry_id=names.current_holder['id']) }}">{{ names.current_holder['name'] }}</a>{% else %}—{% endif %}</td>

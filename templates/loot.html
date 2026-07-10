@@ -2,27 +2,13 @@
 {% block title %}Loot Tracker — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-item{% endblock %}
 
-{% macro loot_table(rows, empty_hint) %}
-  {% if rows %}
-    <table class="related-table">
-      <thead>
-        <tr><th>Item</th><th>Type</th><th>Rarity</th><th>Status</th><th>Value (gp)</th></tr>
-      </thead>
-      <tbody>
-        {% for item in rows %}
-          <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %}">
-            <td><a href="{{ url_for('entry_detail', entry_id=item['id']) }}">{{ item['name'] }}</a></td>
-            <td>{{ item['item_type'] or '—' }}</td>
-            <td>{{ item['rarity'] or '—' }}</td>
-            <td>{{ item['item_status'] or 'In Possession' }}</td>
-            <td>{{ item['estimated_value'] or '—' }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p class="empty-state">{{ empty_hint }}</p>
-  {% endif %}
+{% macro option_select(name, form_id, options, current) %}
+  <select name="{{ name }}" form="{{ form_id }}">
+    <option value=""{% if not current %} selected{% endif %}>—</option>
+    {% for opt in options %}
+      <option value="{{ opt }}"{% if opt == current %} selected{% endif %}>{{ opt }}</option>
+    {% endfor %}
+  </select>
 {% endmacro %}
 
 {% block content %}
@@ -33,8 +19,10 @@
       <h1>Loot Tracker</h1>
     </div>
   </div>
-  <p class="summary">Every item the party's collected, grouped by who's holding it right now. Sold, spent, or lost items stay on the record for history but drop out of the total below.</p>
+  <p class="summary">The party's shared stash — anything a specific Character is personally carrying instead lives on that Character's own page, not here. Edit a row right in the table and hit Save; sold, spent, or lost items stay on the record for history but drop out of the total below.</p>
 </div>
+
+{% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 
 <div class="loot-total">
   <span class="loot-total-label">Party Treasury</span>
@@ -43,28 +31,88 @@
 
 <div class="divider"><span class="divider-mark"></span></div>
 
-{% for group in party_groups %}
-  <div class="related-block">
-    <h2>{{ group.holder['name'] }}'s Haul</h2>
-    {{ loot_table(group.entries, "Nothing carried yet — set this item's Current Holder to " ~ group.holder['name'] ~ " to list it here.") }}
+<form class="entry-form search-filters-form loot-add-form" method="post" action="{{ url_for('loot_item_add') }}">
+  <label>
+    New item name
+    <input type="text" name="name" placeholder="e.g. Potion of Healing" required>
+  </label>
+  <label>
+    Type
+    <select name="item_type">
+      <option value="">—</option>
+      {% for opt in field_options.item_type %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>
+    Qty
+    <input type="number" name="quantity" min="0" value="1" style="width: 5rem;">
+  </label>
+  <label>
+    Rarity
+    <select name="rarity">
+      <option value="">—</option>
+      {% for opt in field_options.rarity %}<option value="{{ opt }}">{{ opt }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>
+    Value (gp)
+    <input type="number" name="estimated_value" min="0" style="width: 6rem;">
+  </label>
+  <label>
+    Status
+    <select name="item_status">
+      <option value="">—</option>
+      {% for opt in field_options.item_status %}<option value="{{ opt }}"{% if opt == 'In Possession' %} selected{% endif %}>{{ opt }}</option>{% endfor %}
+    </select>
+  </label>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">+ Add Item</button>
   </div>
-{% endfor %}
-
-{% if other_groups %}
-  <div class="divider"><span class="divider-mark"></span></div>
-  <h2>Held by Others (NPCs)</h2>
-  {% for group in other_groups %}
-    <div class="related-block">
-      <h2>{{ group.holder_name or 'Unknown' }}</h2>
-      {{ loot_table(group.entries, "") }}
-    </div>
-  {% endfor %}
-{% endif %}
+</form>
 
 <div class="divider"><span class="divider-mark"></span></div>
 
-<div class="related-block">
-  <h2>Unclaimed Items</h2>
-  {{ loot_table(unclaimed, "No unclaimed items — every Item either has a Current Holder set, or there's nothing loose lying around yet.") }}
-</div>
+{% if items %}
+  {% for item in items %}
+    <form id="loot-form-{{ item['id'] }}" method="post" action="{{ url_for('loot_item_update', item_id=item['id']) }}"></form>
+  {% endfor %}
+  <table class="related-table loot-table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Type</th>
+        <th>Qty</th>
+        <th>Rarity</th>
+        <th>Value (gp)</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+        {% set form_id = "loot-form-" ~ item['id'] %}
+        <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %}">
+          <td>
+            <input type="text" name="name" value="{{ item['name'] }}" form="{{ form_id }}" class="loot-input loot-input-name" required>
+          </td>
+          <td>{{ option_select("item_type", form_id, field_options.item_type, item['item_type']) }}</td>
+          <td><input type="number" name="quantity" min="0" value="{{ item['quantity'] if item['quantity'] is not none else 1 }}" form="{{ form_id }}" class="loot-input loot-input-narrow"></td>
+          <td>{{ option_select("rarity", form_id, field_options.rarity, item['rarity']) }}</td>
+          <td><input type="number" name="estimated_value" min="0" value="{{ item['estimated_value'] if item['estimated_value'] is not none else '' }}" form="{{ form_id }}" class="loot-input loot-input-narrow"></td>
+          <td>{{ option_select("item_status", form_id, field_options.item_status, item['item_status']) }}</td>
+          <td class="loot-row-actions">
+            <button type="submit" form="{{ form_id }}" class="btn btn-primary btn-sm">Save</button>
+            <a class="btn btn-sm" href="{{ url_for('entry_detail', entry_id=item['id']) }}">View</a>
+            <form method="post" action="{{ url_for('loot_item_delete', item_id=item['id']) }}" class="loot-delete-form"
+                  onsubmit="return confirm('Remove {{ item['name'] }} from the loot tracker? This deletes the entry entirely.');">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="empty-state">No shared loot yet — add the party's first item above, or clear an Item's Current Holder field to move it here.</p>
+{% endif %}
 {% endblock %}
