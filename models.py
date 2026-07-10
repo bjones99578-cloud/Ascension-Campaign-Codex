@@ -593,6 +593,33 @@ def find_entry_by_name(conn, name):
     ).fetchone()
 
 
+# Categories whose names get automatically hyperlinked wherever they're
+# mentioned in an entry's write-up (see rendering.render_wiki_content) --
+# deliberately just these three, not every category, per how the party
+# wants this to work: plain mentions of a Region/City/Character's name turn
+# into a link on their own, with no [[brackets]] required, while
+# Organizations/Locations/Items/etc. still need an explicit [[wiki link]].
+LINKABLE_NAME_CATEGORIES = ("Region", "City", "Character")
+
+
+def get_linkable_names(conn, exclude_name=None):
+    """Every Region/City/Character name currently in the world -- the
+    candidate list rendering.render_wiki_content auto-links plain mentions
+    of. exclude_name (normally the entry currently being rendered) is left
+    out so a Character's own bio mentioning their own name doesn't
+    self-link, and so on for a City's or Region's own write-up."""
+    placeholders = ", ".join("?" * len(LINKABLE_NAME_CATEGORIES))
+    rows = conn.execute(
+        f"SELECT name FROM entry WHERE category IN ({placeholders})",
+        LINKABLE_NAME_CATEGORIES,
+    ).fetchall()
+    names = [row["name"] for row in rows if row["name"]]
+    if exclude_name:
+        exclude_lower = exclude_name.strip().lower()
+        names = [n for n in names if n.lower() != exclude_lower]
+    return names
+
+
 def get_entry(conn, entry_id):
     return conn.execute("SELECT * FROM entry WHERE id = ?", (entry_id,)).fetchone()
 
@@ -674,10 +701,99 @@ def extract_link_names(content):
     return names
 
 
-def sync_links(conn, source_id, content):
-    """Recompute the link table rows for a given source entry based on its content."""
+# Spans of raw content that auto-linking must never treat as a plain-text
+# mention: fenced code blocks and inline code spans (so a code sample isn't
+# turned into links just because it happens to contain a City's name), and
+# anything already inside a manual [[wiki link]] (handled separately by
+# extract_link_names, so it isn't double-counted here).
+_CODE_BLOCK_PATTERN = re.compile(r"```.*?```", re.DOTALL)
+_INLINE_CODE_PATTERN = re.compile(r"`[^`\n]+`")
+
+
+def _protected_spans(content):
+    spans = []
+    for pattern in (_CODE_BLOCK_PATTERN, _INLINE_CODE_PATTERN, LINK_PATTERN):
+        for m in pattern.finditer(content):
+            spans.append((m.start(), m.end()))
+    return spans
+
+
+def _name_alternation_pattern(candidate_names):
+    """A single compiled regex matching any of candidate_names as a whole
+    word/phrase, case-insensitively -- longer names are listed first so a
+    name that's a substring of a longer one (e.g. "Storm King's" inside
+    "Storm King's Thunder") never steals part of the longer match. Word
+    boundaries are done with explicit lookarounds rather than \\b, since a
+    name can start/end with a character (like an apostrophe) that \\b
+    doesn't treat as a normal word edge."""
+    if not candidate_names:
+        return None
+    names_by_length = sorted(set(candidate_names), key=len, reverse=True)
+    alternation = "|".join(re.escape(name) for name in names_by_length)
+    return re.compile(r"(?<![A-Za-z0-9_])(?:" + alternation + r")(?![A-Za-z0-9_])", re.IGNORECASE)
+
+
+def find_auto_linkable_mentions(content, candidate_names):
+    """Every plain-text mention of a Region/City/Character name (see
+    get_linkable_names) found in `content`, as a list of the matched text in
+    whatever casing it was actually typed in. Skips fenced code blocks,
+    inline code spans, and anything already inside a manual [[wiki link]].
+    Used both by sync_links (so "What links here" / the Timeline's mention
+    list include these automatic mentions, not just hand-typed [[links]])
+    and by rendering.render_wiki_content (so the same mentions render as
+    actual clickable links) -- one shared definition of "what counts as a
+    mention" for both."""
+    if not content or not candidate_names:
+        return []
+    pattern = _name_alternation_pattern(candidate_names)
+    if pattern is None:
+        return []
+    protected = _protected_spans(content)
+
+    def is_protected(start, end):
+        return any(start < p_end and end > p_start for p_start, p_end in protected)
+
+    return [m.group(0) for m in pattern.finditer(content) if not is_protected(m.start(), m.end())]
+
+
+def wrap_auto_linkable_mentions(content, candidate_names):
+    """Same matching rules as find_auto_linkable_mentions, but returns the
+    content itself with every matched mention wrapped in [[Name]] syntax
+    instead of a list of names -- used by rendering.render_wiki_content so a
+    plain-text mention flows through the exact same [[link]] rendering as a
+    hand-typed one (missing-entry "click to create" styling, HTML escaping,
+    etc.) with no separate display code path to keep in sync. Every
+    occurrence is wrapped, not just the first, so a name-heavy recap stays
+    clickable throughout rather than only at its first mention."""
+    if not content or not candidate_names:
+        return content
+    pattern = _name_alternation_pattern(candidate_names)
+    if pattern is None:
+        return content
+    protected = _protected_spans(content)
+
+    def is_protected(start, end):
+        return any(start < p_end and end > p_start for p_start, p_end in protected)
+
+    def replace(match):
+        if is_protected(match.start(), match.end()):
+            return match.group(0)
+        return f"[[{match.group(0)}]]"
+
+    return pattern.sub(replace, content)
+
+
+def sync_links(conn, source_id, content, exclude_name=None):
+    """Recompute the link table rows for a given source entry based on its
+    content -- both explicit [[wiki links]] and plain-text mentions of a
+    Region/City/Character's name (see find_auto_linkable_mentions), so
+    "What links here" and the Timeline's mention list reflect every link
+    that's actually clickable on the rendered page, not just hand-typed
+    [[brackets]]. exclude_name (the entry's own name) keeps a Character's
+    own bio mentioning their own name from linking to itself."""
     conn.execute("DELETE FROM link WHERE source_id = ?", (source_id,))
     names = extract_link_names(content)
+    names += find_auto_linkable_mentions(content, get_linkable_names(conn, exclude_name=exclude_name))
     seen = set()
     for name in names:
         key = name.lower()
@@ -691,6 +807,29 @@ def sync_links(conn, source_id, content):
             (source_id, name, target_id),
         )
     conn.commit()
+
+
+def resync_auto_links_for_all(conn, current_entry_id=None):
+    """Re-run sync_links for every entry in the database -- used whenever a
+    Region/City/Character entry is created, renamed, or deleted, since any
+    of those change the candidate name list plain-text auto-linking matches
+    against (see get_linkable_names / wrap_auto_linkable_mentions). Without
+    this, an entry written *before* some City existed would only pick up a
+    real "What links here" / Timeline-mention link to it the next time that
+    older entry itself happened to be edited and saved again -- even though
+    the page already renders the mention as a clickable link on every view
+    (rendering.render_wiki_content always looks up the current candidate
+    list). This instead makes the backlinks/Timeline data catch up
+    immediately, so both stay consistent with what's actually on the page.
+    current_entry_id is skipped since the caller (create_entry/update_entry)
+    already just called sync_links for it directly. Cheap enough for a
+    typical campaign's entry count (dozens to a few hundred) to run inline
+    rather than needing a background job."""
+    rows = conn.execute("SELECT id, name, content FROM entry").fetchall()
+    for row in rows:
+        if current_entry_id is not None and row["id"] == current_entry_id:
+            continue
+        sync_links(conn, row["id"], row["content"], exclude_name=row["name"])
 
 
 def resolve_dangling_links(conn, entry_id, entry_name):
@@ -981,7 +1120,13 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
     conn.commit()
     entry_id = cur.lastrowid
     resolve_dangling_links(conn, entry_id, name)
-    sync_links(conn, entry_id, content)
+    sync_links(conn, entry_id, content, exclude_name=name.strip())
+    if category in LINKABLE_NAME_CATEGORIES:
+        # A brand-new Region/City/Character is a brand-new auto-link
+        # candidate for every *other* entry too -- catch up any existing
+        # entry that already mentioned this name in plain text before it
+        # existed (see resync_auto_links_for_all).
+        resync_auto_links_for_all(conn, current_entry_id=entry_id)
     return entry_id
 
 
@@ -998,6 +1143,7 @@ def update_entry(conn, entry_id, name, category, summary, content, author, image
     since a <select>/<input> always resubmits its current value. pc_slot is likewise
     always overwritten — callers that want to preserve an existing slot must pass it
     back in explicitly (the entry form carries it through as a hidden field)."""
+    previous = get_entry(conn, entry_id)
     details = details or {}
     ts = now_iso()
     set_cols = [
@@ -1024,7 +1170,22 @@ def update_entry(conn, entry_id, name, category, summary, content, author, image
     conn.execute(f"UPDATE entry SET {set_clause} WHERE id = ?", set_vals)
     conn.commit()
     resolve_dangling_links(conn, entry_id, name)
-    sync_links(conn, entry_id, content)
+    sync_links(conn, entry_id, content, exclude_name=name.strip())
+    name_changed = previous and previous["name"].strip().lower() != name.strip().lower()
+    category_changed = previous and previous["category"] != category
+    was_or_is_linkable = (
+        (previous and previous["category"] in LINKABLE_NAME_CATEGORIES)
+        or category in LINKABLE_NAME_CATEGORIES
+    )
+    if (name_changed or category_changed) and was_or_is_linkable:
+        # Renaming a Region/City/Character (or moving an entry into or out of
+        # those categories) changes the auto-link candidate list for every
+        # *other* entry too -- e.g. renamed "Waterdeep" to "New Waterdeep"
+        # means every other entry's rendered links and backlinks need to
+        # follow the rename, not just this entry's own (see
+        # resync_auto_links_for_all). A plain content edit with no rename
+        # doesn't need this -- sync_links above already covers that case.
+        resync_auto_links_for_all(conn, current_entry_id=entry_id)
 
 
 def clear_entry_image(conn, entry_id):
@@ -1033,7 +1194,17 @@ def clear_entry_image(conn, entry_id):
 
 
 def delete_entry(conn, entry_id):
+    entry = get_entry(conn, entry_id)
     clear_links_to(conn, entry_id)
     conn.execute("DELETE FROM link WHERE source_id = ?", (entry_id,))
     conn.execute("DELETE FROM entry WHERE id = ?", (entry_id,))
     conn.commit()
+    if entry and entry["category"] in LINKABLE_NAME_CATEGORIES:
+        # The deleted entry's name is no longer a valid auto-link candidate
+        # for anyone -- without this, another entry's rendered page already
+        # stops linking that now-gone name (rendering.render_wiki_content
+        # always looks up the current candidate list), but its stored
+        # backlink/Timeline-mention row would linger stale until that entry
+        # was next edited and saved. resync_auto_links_for_all catches
+        # everyone up immediately instead.
+        resync_auto_links_for_all(conn)

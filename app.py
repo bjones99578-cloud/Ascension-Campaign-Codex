@@ -287,7 +287,7 @@ def entry_detail(entry_id):
     entry = models.get_entry(conn, entry_id)
     if entry is None:
         return render_template("not_found.html"), 404
-    rendered = render_wiki_content(entry["content"], conn)
+    rendered = render_wiki_content(entry["content"], conn, exclude_name=entry["name"])
     all_backlinks = models.get_backlinks(conn, entry_id)
 
     related = None
@@ -760,7 +760,7 @@ def city_view():
             organizations_display.append({"entry": org, "leader": leader})
 
         if selected_city["content"]:
-            rendered_summary = render_wiki_content(selected_city["content"], conn)
+            rendered_summary = render_wiki_content(selected_city["content"], conn, exclude_name=selected_city["name"])
 
     return render_template(
         "city_view.html",

@@ -173,8 +173,22 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   another entry, or `[[Entry Name|custom display text]]`. If the target
   doesn't exist yet, the link shows up dashed/orange — click it to create
   that entry on the spot.
+- **Automatic Region/City/Character links**: you don't have to type
+  `[[brackets]]` around a Region, City, or Character's name for it to link —
+  just write their name normally in an entry's content (e.g. "the party rode
+  into Waterdeep and met Elminster at the tower") and every mention turns
+  into a clickable link on its own, case-insensitive, every time the name
+  appears. It skips a name inside a code block or already-manual
+  `[[wiki link]]`, and an entry mentioning its own name doesn't link to
+  itself. This only applies to Regions, Cities, and Characters — Organizations,
+  Locations, Items, and Quests still need an explicit `[[wiki link]]`.
+  Renaming or deleting a Region/City/Character updates every other entry's
+  links to match immediately, and an entry written before some City existed
+  picks up the link retroactively the moment that City is created — nothing
+  needs to be re-saved by hand.
 - **Backlinks**: every entry page has a "What links here" section, computed
-  automatically from other entries' content.
+  automatically from other entries' content — both hand-typed `[[wiki links]]`
+  and the automatic Region/City/Character mentions above.
 - **Markdown**: entry content supports standard Markdown (headings, bold,
   lists, tables, code blocks).
 - **No login system**: anyone with the link can create and edit entries, which

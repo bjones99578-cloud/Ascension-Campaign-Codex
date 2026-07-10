@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import markdown
 
-from models import LINK_PATTERN, find_entry_by_name
+from models import LINK_PATTERN, find_entry_by_name, get_linkable_names, wrap_auto_linkable_mentions
 
 # Lightweight HTML sanitizer (no external dependency required). This app is meant
 # for a small trusted group of friends, not the public internet, so this is a
@@ -26,10 +26,19 @@ def sanitize_html(raw_html):
     return cleaned
 
 
-def render_wiki_content(content, conn):
-    """Convert raw markdown + [[wiki links]] into safe HTML."""
+def render_wiki_content(content, conn, exclude_name=None):
+    """Convert raw markdown + [[wiki links]] into safe HTML. Plain-text
+    mentions of a known Region/City/Character name (see
+    models.get_linkable_names) are auto-linked the same as a hand-typed
+    [[wiki link]] -- see models.wrap_auto_linkable_mentions for the matching
+    rules (whole-word, case-insensitive, skips code spans and text already
+    inside [[brackets]]). exclude_name -- normally the name of the entry
+    whose own content this is -- is left out of auto-linking, so an entry's
+    write-up mentioning its own name doesn't link to itself."""
+    candidate_names = get_linkable_names(conn, exclude_name=exclude_name)
+    content = wrap_auto_linkable_mentions(content or "", candidate_names)
     raw_html = markdown.markdown(
-        content or "",
+        content,
         extensions=["fenced_code", "tables", "nl2br", "sane_lists"],
     )
     clean_html = sanitize_html(raw_html)
