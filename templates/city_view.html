@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}City View — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dynamic City View</h1>
+</div>
+
+<form class="city-view-select" method="get">
+  <label>
+    Select City
+    <select name="city_id" onchange="this.form.submit()">
+      {% for city in cities %}
+        <option value="{{ city['id'] }}" {% if selected_city and city['id'] == selected_city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <noscript><button type="submit" class="btn">Go</button></noscript>
+</form>
+
+{% if not cities %}
+  <p class="empty-state">No cities yet — <a href="{{ url_for('new_entry', category='City') }}">create one</a> to use this view.</p>
+{% elif selected_city %}
+  <div class="watchboard">
+    <div class="related-block">
+      <h2>City Info</h2>
+      <table class="related-table">
+        <tbody>
+          <tr><td>Name</td><td><a href="{{ url_for('entry_detail', entry_id=selected_city['id']) }}">{{ selected_city['name'] }}</a></td></tr>
+          <tr><td>Region</td><td>{% if region %}<a href="{{ url_for('entry_detail', entry_id=region['id']) }}">{{ region['name'] }}</a>{% else %}—{% endif %}</td></tr>
+          <tr><td>Settlement Size</td><td>{{ selected_city['settlement_size'] or '—' }}</td></tr>
+          <tr><td>Government</td><td>{{ selected_city['government'] or '—' }}</td></tr>
+          <tr><td>Population</td><td>{{ selected_city['population'] or '—' }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="related-block">
+      <h2>City Summary</h2>
+      {% if selected_city['summary'] %}<p class="summary">{{ selected_city['summary'] }}</p>{% endif %}
+      {% if rendered_summary %}
+        <div class="entry-body watchboard-summary">{{ rendered_summary | safe }}</div>
+      {% else %}
+        <p class="empty-state">No write-up yet — add one on the city's own page.</p>
+      {% endif %}
+    </div>
+
+    <div class="watchboard-columns">
+      <div class="related-block">
+        <h2>Characters in {{ selected_city['name'] }}</h2>
+        {% if characters %}
+          <table class="related-table">
+            <thead><tr><th>Name</th><th>Class</th><th>Level</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for c in characters %}
+                <tr>
+                  <td><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></td>
+                  <td>{{ c['char_class'] or '—' }}</td>
+                  <td>{{ c['level'] or '—' }}</td>
+                  <td>{{ c['character_status'] or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-state">No characters linked to this city yet — set it as a Character's Home City, or link with <code>[[{{ selected_city['name'] }}]]</code>.</p>
+        {% endif %}
+      </div>
+
+      <div class="related-block">
+        <h2>Organizations in {{ selected_city['name'] }}</h2>
+        {% if organizations_display %}
+          <table class="related-table">
+            <thead><tr><th>Organization</th><th>Type</th><th>Leader</th><th>Status</th><th>Alignment</th></tr></thead>
+            <tbody>
+              {% for od in organizations_display %}
+                <tr>
+                  <td><a href="{{ url_for('entry_detail', entry_id=od.entry['id']) }}">{{ od.entry['name'] }}</a></td>
+                  <td>{{ od.entry['org_type'] or '—' }}</td>
+                  <td>
+                    {% if od.leader %}
+                      <a href="{{ url_for('entry_detail', entry_id=od.leader['id']) }}">{{ od.leader['name'] }}</a>
+                    {% else %}—{% endif %}
+                  </td>
+                  <td>{{ od.entry['org_status'] or '—' }}</td>
+                  <td>{{ od.entry['alignment'] or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-state">No organizations linked to this city yet — set it as an Organization's Headquarters City, or link with <code>[[{{ selected_city['name'] }}]]</code>.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

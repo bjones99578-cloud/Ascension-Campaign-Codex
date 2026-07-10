@@ -46,8 +46,20 @@
     <span>Last updated {{ entry['updated_at'][:10] }}</span>
   </div>
 
-  {% if related_entities %}
+  {% set df = detail_fields.get(entry['category'], []) %}
+  {% set ns = namespace(has_any=false) %}
+  {% for f in df %}
+    {% if entry[f.name] %}{% set ns.has_any = true %}{% endif %}
+  {% endfor %}
+  {% if related_entities %}{% set ns.has_any = true %}{% endif %}
+
+  {% if ns.has_any %}
     <div class="entry-relations">
+      {% for f in df %}
+        {% if entry[f.name] %}
+          <span><span class="relation-label">{{ f.label }}:</span> {{ entry[f.name] }}</span>
+        {% endif %}
+      {% endfor %}
       {% if related_entities.home_city %}
         <span><span class="relation-label">Home City:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.home_city['id']) }}">{{ related_entities.home_city['name'] }}</a></span>
       {% endif %}
@@ -59,6 +71,9 @@
       {% endif %}
       {% if related_entities.headquarters_city %}
         <span><span class="relation-label">Headquartered in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.headquarters_city['id']) }}">{{ related_entities.headquarters_city['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.leader %}
+        <span><span class="relation-label">Led by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.leader['id']) }}">{{ related_entities.leader['name'] }}</a></span>
       {% endif %}
     </div>
   {% endif %}

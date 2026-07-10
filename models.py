@@ -31,8 +31,138 @@ LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
 # Each is nullable and only meaningful for entries of a particular category:
 #   home_city_id, organization_id -> Character
 #   region_id                     -> City
-#   headquarters_city_id          -> Organization
-RELATIONSHIP_COLUMNS = ("home_city_id", "organization_id", "region_id", "headquarters_city_id")
+#   headquarters_city_id, leader_id -> Organization (leader_id points at a Character)
+RELATIONSHIP_COLUMNS = (
+    "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+)
+
+# ---------- typical D&D "detail" fields, per category ----------
+# These are plain-value fields (not relationships to other entries) that give
+# each entry type the flavor of information a D&D party actually tracks.
+# Fields with a standard fixed vocabulary render as dropdowns on the form;
+# everything else is free text or a number.
+
+SPECIES_OPTIONS = [
+    "Human", "Elf", "Dwarf", "Halfling", "Gnome", "Half-Elf", "Half-Orc",
+    "Tiefling", "Dragonborn", "Other/Homebrew",
+]
+
+CLASS_OPTIONS = [
+    "Barbarian", "Bard", "Cleric", "Druid", "Fighter", "Monk", "Paladin",
+    "Ranger", "Rogue", "Sorcerer", "Warlock", "Wizard", "Other/Homebrew",
+]
+
+ALIGNMENT_OPTIONS = [
+    "Lawful Good", "Neutral Good", "Chaotic Good",
+    "Lawful Neutral", "True Neutral", "Chaotic Neutral",
+    "Lawful Evil", "Neutral Evil", "Chaotic Evil",
+]
+
+BACKGROUND_OPTIONS = [
+    "Acolyte", "Charlatan", "Criminal", "Entertainer", "Folk Hero",
+    "Guild Artisan", "Hermit", "Noble", "Outlander", "Sage", "Sailor",
+    "Soldier", "Urchin", "Other/Homebrew",
+]
+
+SETTLEMENT_SIZE_OPTIONS = [
+    "Thorpe", "Hamlet", "Village", "Small Town", "Large Town",
+    "Small City", "Large City", "Metropolis",
+]
+
+GOVERNMENT_OPTIONS = [
+    "Monarchy", "Republic", "Theocracy", "Council/Oligarchy", "Tribal",
+    "Magocracy", "Anarchy/Lawless", "Other",
+]
+
+ORG_TYPE_OPTIONS = [
+    "Guild", "Religious Order", "Military Order", "Criminal Syndicate",
+    "Noble House", "Adventuring Company", "Mercantile Company",
+    "Secret Society", "Cult", "Other",
+]
+
+TERRAIN_OPTIONS = [
+    "Forest", "Mountains", "Desert", "Swamp", "Plains/Grassland",
+    "Coastal", "Arctic/Tundra", "Underdark", "Urban", "Mixed", "Other",
+]
+
+CLIMATE_OPTIONS = ["Temperate", "Tropical", "Arid", "Arctic", "Subarctic", "Variable", "Other"]
+
+LOCATION_TYPE_OPTIONS = [
+    "Dungeon", "Ruins", "Temple/Shrine", "Cave/Cavern", "Forest Grove",
+    "Camp/Outpost", "Shop", "Tavern/Inn", "Tower", "Castle/Keep",
+    "Battlefield", "Other",
+]
+
+DANGER_LEVEL_OPTIONS = ["Safe", "Low", "Moderate", "High", "Deadly"]
+
+ITEM_TYPE_OPTIONS = [
+    "Weapon", "Armor", "Shield", "Wondrous Item", "Potion", "Scroll",
+    "Ring", "Rod", "Staff", "Wand", "Ammunition", "Other",
+]
+
+RARITY_OPTIONS = ["Mundane", "Common", "Uncommon", "Rare", "Very Rare", "Legendary", "Artifact"]
+
+ATTUNEMENT_OPTIONS = ["Yes", "No"]
+
+QUEST_STATUS_OPTIONS = ["Not Started", "Active", "Completed", "Failed", "Abandoned"]
+
+CHARACTER_STATUS_OPTIONS = ["Alive", "Dead", "Missing", "Retired"]
+
+ORG_STATUS_OPTIONS = ["Active", "Disbanded", "Dissolved", "Dormant"]
+
+# category -> ordered list of field descriptors shown on that category's form
+# and detail page. type is "select", "number", or "text".
+DETAIL_FIELDS = {
+    "Character": [
+        {"name": "species", "label": "Species", "type": "select", "options": SPECIES_OPTIONS},
+        {"name": "char_class", "label": "Class", "type": "select", "options": CLASS_OPTIONS},
+        {"name": "level", "label": "Level", "type": "number", "min": 1, "max": 20},
+        {"name": "alignment", "label": "Alignment", "type": "select", "options": ALIGNMENT_OPTIONS},
+        {"name": "background", "label": "Background", "type": "select", "options": BACKGROUND_OPTIONS},
+        {"name": "character_status", "label": "Status", "type": "select", "options": CHARACTER_STATUS_OPTIONS},
+    ],
+    "City": [
+        {"name": "settlement_size", "label": "Settlement Size", "type": "select", "options": SETTLEMENT_SIZE_OPTIONS},
+        {"name": "government", "label": "Government", "type": "select", "options": GOVERNMENT_OPTIONS},
+        {"name": "population", "label": "Population", "type": "number", "min": 0},
+    ],
+    "Organization": [
+        {"name": "org_type", "label": "Organization Type", "type": "select", "options": ORG_TYPE_OPTIONS},
+        {"name": "alignment", "label": "Alignment", "type": "select", "options": ALIGNMENT_OPTIONS},
+        {"name": "org_status", "label": "Status", "type": "select", "options": ORG_STATUS_OPTIONS},
+    ],
+    "Region": [
+        {"name": "terrain", "label": "Terrain", "type": "select", "options": TERRAIN_OPTIONS},
+        {"name": "climate", "label": "Climate", "type": "select", "options": CLIMATE_OPTIONS},
+    ],
+    "Location": [
+        {"name": "location_type", "label": "Location Type", "type": "select", "options": LOCATION_TYPE_OPTIONS},
+        {"name": "danger_level", "label": "Danger Level", "type": "select", "options": DANGER_LEVEL_OPTIONS},
+    ],
+    "Item": [
+        {"name": "item_type", "label": "Item Type", "type": "select", "options": ITEM_TYPE_OPTIONS},
+        {"name": "rarity", "label": "Rarity", "type": "select", "options": RARITY_OPTIONS},
+        {"name": "requires_attunement", "label": "Requires Attunement", "type": "select", "options": ATTUNEMENT_OPTIONS},
+    ],
+    "Quest": [
+        {"name": "quest_status", "label": "Status", "type": "select", "options": QUEST_STATUS_OPTIONS},
+        {"name": "quest_giver", "label": "Quest Giver", "type": "text"},
+        {"name": "reward", "label": "Reward", "type": "text"},
+    ],
+}
+
+# Flat, de-duplicated list of every detail column across all categories
+# (e.g. "alignment" is shared by Character and Organization), used for
+# schema creation/migration and generic read/write of these fields.
+DETAIL_COLUMNS = sorted({f["name"] for fields in DETAIL_FIELDS.values() for f in fields})
+
+# Columns that store a number rather than text.
+DETAIL_INT_COLUMNS = {"level", "population"}
+
+
+def empty_details():
+    """A details dict with every column set to None, for a brand-new entry."""
+    return {col: None for col in DETAIL_COLUMNS}
 
 
 def get_db():
@@ -44,8 +174,11 @@ def get_db():
 
 def init_db():
     conn = get_db()
+    detail_column_defs = ",\n            ".join(
+        f"{col} {'INTEGER' if col in DETAIL_INT_COLUMNS else 'TEXT'}" for col in DETAIL_COLUMNS
+    )
     conn.executescript(
-        """
+        f"""
         CREATE TABLE IF NOT EXISTS entry (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -58,6 +191,8 @@ def init_db():
             organization_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             region_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             headquarters_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            leader_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            {detail_column_defs},
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -86,10 +221,17 @@ def init_db():
     # plain nullable INTEGERs — that's fine, the app is the only thing writing
     # to them and only ever with either a valid entry id or NULL.
     existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(entry)")}
-    for col in ("image_filename",) + RELATIONSHIP_COLUMNS:
-        if col not in existing_cols:
-            conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER" if col != "image_filename"
-                         else "ALTER TABLE entry ADD COLUMN image_filename TEXT")
+    for col in ("image_filename",) + RELATIONSHIP_COLUMNS + tuple(DETAIL_COLUMNS):
+        if col in existing_cols:
+            continue
+        if col == "image_filename":
+            conn.execute("ALTER TABLE entry ADD COLUMN image_filename TEXT")
+        elif col in RELATIONSHIP_COLUMNS:
+            conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER")
+        elif col in DETAIL_INT_COLUMNS:
+            conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER")
+        else:
+            conn.execute(f"ALTER TABLE entry ADD COLUMN {col} TEXT")
     conn.commit()
     conn.close()
 
@@ -250,14 +392,28 @@ def get_cities_in_region(conn, region_id):
 
 
 def create_entry(conn, name, category, summary, content, author, image_filename=None,
-                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None):
+                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
+                  leader_id=None, details=None):
+    """details: dict mapping a DETAIL_COLUMNS column name to its value (or None) —
+    the typical D&D fields (Species, Class, Alignment, etc.) relevant to whichever
+    category this entry is. Columns not relevant to this category are simply
+    left NULL."""
+    details = details or {}
     ts = now_iso()
+    base_cols = [
+        "name", "category", "summary", "content", "author", "image_filename",
+        "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+        "created_at", "updated_at",
+    ]
+    base_vals = [
+        name.strip(), category, summary.strip(), content, author.strip(), image_filename,
+        home_city_id, organization_id, region_id, headquarters_city_id, leader_id, ts, ts,
+    ]
+    all_cols = base_cols + DETAIL_COLUMNS
+    all_vals = base_vals + [details.get(col) for col in DETAIL_COLUMNS]
+    placeholders = ", ".join(["?"] * len(all_cols))
     cur = conn.execute(
-        "INSERT INTO entry (name, category, summary, content, author, image_filename, "
-        "home_city_id, organization_id, region_id, headquarters_city_id, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (name.strip(), category, summary.strip(), content, author.strip(), image_filename,
-         home_city_id, organization_id, region_id, headquarters_city_id, ts, ts),
+        f"INSERT INTO entry ({', '.join(all_cols)}) VALUES ({placeholders})", all_vals
     )
     conn.commit()
     entry_id = cur.lastrowid
@@ -267,29 +423,34 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
 
 
 def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
-                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None):
+                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
+                  leader_id=None, details=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
     leave whatever image is already set untouched (use clear_entry_image to remove it).
-    The relationship ids (home_city_id, etc.) are always set to whatever is passed
-    in, including None to clear them — unlike image_filename there's no separate
-    "leave unchanged" state, since a <select> always resubmits its current value."""
+    The relationship ids (home_city_id, etc.) and the details dict (Species, Class,
+    Alignment, etc.) are always set to whatever is passed in, including None to
+    clear them — unlike image_filename there's no separate "leave unchanged" state,
+    since a <select>/<input> always resubmits its current value."""
+    details = details or {}
     ts = now_iso()
+    set_cols = [
+        "name", "category", "summary", "content", "author",
+        "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+    ]
+    set_vals = [
+        name.strip(), category, summary.strip(), content, author.strip(),
+        home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
+    ]
     if image_filename is not None:
-        conn.execute(
-            "UPDATE entry SET name = ?, category = ?, summary = ?, content = ?, author = ?, "
-            "image_filename = ?, home_city_id = ?, organization_id = ?, region_id = ?, "
-            "headquarters_city_id = ?, updated_at = ? WHERE id = ?",
-            (name.strip(), category, summary.strip(), content, author.strip(), image_filename,
-             home_city_id, organization_id, region_id, headquarters_city_id, ts, entry_id),
-        )
-    else:
-        conn.execute(
-            "UPDATE entry SET name = ?, category = ?, summary = ?, content = ?, author = ?, "
-            "home_city_id = ?, organization_id = ?, region_id = ?, headquarters_city_id = ?, "
-            "updated_at = ? WHERE id = ?",
-            (name.strip(), category, summary.strip(), content, author.strip(),
-             home_city_id, organization_id, region_id, headquarters_city_id, ts, entry_id),
-        )
+        set_cols.append("image_filename")
+        set_vals.append(image_filename)
+    set_cols.extend(DETAIL_COLUMNS)
+    set_vals.extend(details.get(col) for col in DETAIL_COLUMNS)
+    set_cols.append("updated_at")
+    set_vals.append(ts)
+    set_clause = ", ".join(f"{c} = ?" for c in set_cols)
+    set_vals.append(entry_id)
+    conn.execute(f"UPDATE entry SET {set_clause} WHERE id = ?", set_vals)
     conn.commit()
     resolve_dangling_links(conn, entry_id, name)
     sync_links(conn, entry_id, content)

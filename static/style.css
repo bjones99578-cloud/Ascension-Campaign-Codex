@@ -455,6 +455,42 @@ code {
 .current-image { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
 .current-image img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 .form-actions { display: flex; gap: 0.75rem; }
+
+/* ---------- city view ---------- */
+
+.city-view-select {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  max-width: 400px;
+}
+.city-view-select label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: bold;
+  font-family: var(--font-heading);
+  flex: 1;
+}
+.city-view-select select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+.watchboard-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.watchboard-summary { margin-top: 0.75rem; padding: 1.25rem 1.5rem; }
+@media (max-width: 800px) {
+  .watchboard-columns { grid-template-columns: 1fr; }
+}
 .form-error {
   background: rgba(168,67,58,0.15);
   border: 1px solid var(--danger);

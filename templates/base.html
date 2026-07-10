@@ -25,6 +25,7 @@
   </div>
   <nav class="category-nav">
     <a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">Map</a>
+    <a href="{{ url_for('city_view') }}" class="{% if request.path == url_for('city_view') %}active{% endif %}">City View</a>
     {% for cat in categories %}
       <a href="{{ url_for('category_view', category=cat) }}" class="{% if request.path == url_for('category_view', category=cat) %}active{% endif %}">
         {{ category_plurals.get(cat, cat + 's') }} <span class="count">{{ category_counts.get(cat, 0) }}</span>

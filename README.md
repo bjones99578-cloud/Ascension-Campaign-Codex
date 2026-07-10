@@ -33,10 +33,33 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   entry types have explicit dropdown fields so the connection is guaranteed
   to show up in the right table even if nobody remembers to write a link:
   Characters can pick a **Home City** and an **Organization**, Cities can
-  pick a **Region**, and Organizations can pick a **Headquarters City**. Set
-  these when creating or editing an entry — the dropdown only appears once
-  you've picked the matching category. Entries linked either way (dropdown or
-  `[[wiki link]]`) show up together in the same table, de-duplicated.
+  pick a **Region**, and Organizations can pick a **Headquarters City** and a
+  **Leader** (any Character). Set these when creating or editing an entry —
+  the dropdown only appears once you've picked the matching category. Entries
+  linked either way (dropdown or `[[wiki link]]`) show up together in the
+  same table, de-duplicated.
+- **Typical D&D fields per category**: each category also has a few
+  quick-reference fields shown right under the title, separate from the
+  free-text content — fill in whichever apply, everything's optional:
+  - **Character**: Species, Class, Level, Alignment, Background, Status
+    (Alive / Dead / Missing / Retired)
+  - **City**: Settlement Size, Government, Population
+  - **Organization**: Organization Type, Alignment, Status (Active /
+    Disbanded / Dissolved / Dormant)
+  - **Region**: Terrain, Climate
+  - **Location**: Location Type, Danger Level
+  - **Item**: Item Type, Rarity, Requires Attunement
+  - **Quest**: Status, Quest Giver, Reward
+
+  These fields only appear on the form once you've picked the matching
+  category, and most are dropdowns of standard 5e-style options (with an
+  "Other" choice for homebrew) so entries stay consistent across the party.
+- **City View**: the "City View" link in the nav is a one-page watchboard for
+  running a session — pick a city from the dropdown and see its Region,
+  Settlement Size, Government, and Population, its write-up, and live tables
+  of every Character (with Class/Level/Status) and Organization (with
+  Type/Leader/Status/Alignment) connected to it, all on one screen instead of
+  clicking through separate entry pages as the party travels around.
 - **Wiki links**: in any entry's content, type `[[Entry Name]]` to link to
   another entry, or `[[Entry Name|custom display text]]`. If the target
   doesn't exist yet, the link shows up dashed/orange — click it to create

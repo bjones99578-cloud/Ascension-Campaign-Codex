@@ -33,6 +33,31 @@
     </select>
   </label>
 
+  {% for cat, fields in detail_fields.items() %}
+    <div class="field-group" data-show-for="{{ cat }}">
+      {% for f in fields %}
+        <label>
+          {{ f.label }}
+          {% if f.type == "select" %}
+            <select name="{{ f.name }}">
+              <option value="">— None —</option>
+              {% for opt in f.options %}
+                <option value="{{ opt }}" {% if form.get(f.name) == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          {% elif f.type == "number" %}
+            <input type="number" name="{{ f.name }}"
+                   value="{{ form.get(f.name) if form.get(f.name) is not none else '' }}"
+                   {% if f.min is defined %}min="{{ f.min }}"{% endif %}
+                   {% if f.max is defined %}max="{{ f.max }}"{% endif %}>
+          {% else %}
+            <input type="text" name="{{ f.name }}" value="{{ form.get(f.name) or '' }}">
+          {% endif %}
+        </label>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
   <div class="field-group" data-show-for="Character">
     <label>
       Home City <span class="hint">(optional)</span>
@@ -73,6 +98,15 @@
         <option value="">— None —</option>
         {% for city in city_options %}
           <option value="{{ city['id'] }}" {% if form.headquarters_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Leader <span class="hint">(optional)</span>
+      <select name="leader">
+        <option value="">— None —</option>
+        {% for character in character_options %}
+          <option value="{{ character['id'] }}" {% if form.leader_id == character['id'] %}selected{% endif %}>{{ character['name'] }}</option>
         {% endfor %}
       </select>
     </label>

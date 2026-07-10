@@ -20,17 +20,36 @@ def get_conn():
 
 def relationship_options(conn):
     """Option lists for the Home City / Organization / Region / Headquarters
-    City dropdowns on the entry form."""
+    City / Leader dropdowns on the entry form."""
     return {
         "city_options": models.list_entries(conn, category="City"),
         "organization_options": models.list_entries(conn, category="Organization"),
         "region_options": models.list_entries(conn, category="Region"),
+        "character_options": models.list_entries(conn, category="Character"),
     }
 
 
 def _parse_relationship_id(value):
     """Convert a <select> value (empty string or a numeric id) to int or None."""
     return int(value) if value else None
+
+
+def parse_detail_fields(form):
+    """Read the typical D&D detail fields (Species, Class, Alignment, Population,
+    etc.) out of a submitted form, keyed by their DB column name. Numeric columns
+    are converted to int (or None if blank/invalid); everything else is stripped
+    text (or None if blank)."""
+    details = {}
+    for col in models.DETAIL_COLUMNS:
+        raw = (form.get(col) or "").strip()
+        if col in models.DETAIL_INT_COLUMNS:
+            try:
+                details[col] = int(raw) if raw else None
+            except ValueError:
+                details[col] = None
+        else:
+            details[col] = raw or None
+    return details
 
 
 @app.teardown_appcontext
@@ -48,6 +67,7 @@ def inject_globals():
         "category_plurals": models.CATEGORY_PLURALS,
         "category_counts": models.category_counts(conn),
         "current_author": session.get("display_name", ""),
+        "detail_fields": models.DETAIL_FIELDS,
     }
 
 
@@ -140,6 +160,8 @@ def entry_detail(entry_id):
     elif entry["category"] == "Organization":
         if entry["headquarters_city_id"]:
             related_entities["headquarters_city"] = models.get_entry(conn, entry["headquarters_city_id"])
+        if entry["leader_id"]:
+            related_entities["leader"] = models.get_entry(conn, entry["leader_id"])
 
     return render_template(
         "entry_detail.html",
@@ -168,6 +190,8 @@ def new_entry():
         organization_id = _parse_relationship_id(request.form.get("organization"))
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
+        leader_id = _parse_relationship_id(request.form.get("leader"))
+        details = parse_detail_fields(request.form)
         error = None
         if not name:
             error = "Please give this entry a name."
@@ -189,6 +213,8 @@ def new_entry():
                     "organization_id": organization_id,
                     "region_id": region_id,
                     "headquarters_city_id": headquarters_city_id,
+                    "leader_id": leader_id,
+                    **details,
                 },
                 **relationship_options(conn),
             )
@@ -210,6 +236,7 @@ def new_entry():
             conn, name, category, summary, content, author, image_filename,
             home_city_id=home_city_id, organization_id=organization_id,
             region_id=region_id, headquarters_city_id=headquarters_city_id,
+            leader_id=leader_id, details=details,
         )
         return redirect(url_for("entry_detail", entry_id=entry_id))
 
@@ -230,6 +257,8 @@ def new_entry():
             "organization_id": None,
             "region_id": None,
             "headquarters_city_id": None,
+            "leader_id": None,
+            **models.empty_details(),
         },
         **relationship_options(conn),
     )
@@ -268,6 +297,8 @@ def import_dndbeyond():
                         "organization_id": None,
                         "region_id": None,
                         "headquarters_city_id": None,
+                        "leader_id": None,
+                        **models.empty_details(),
                     },
                     **relationship_options(get_conn()),
                 )
@@ -294,6 +325,8 @@ def edit_entry(entry_id):
         organization_id = _parse_relationship_id(request.form.get("organization"))
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
+        leader_id = _parse_relationship_id(request.form.get("leader"))
+        details = parse_detail_fields(request.form)
         error = None
         if not name:
             error = "Please give this entry a name."
@@ -318,6 +351,8 @@ def edit_entry(entry_id):
                     "organization_id": organization_id,
                     "region_id": region_id,
                     "headquarters_city_id": headquarters_city_id,
+                    "leader_id": leader_id,
+                    **details,
                 },
                 **relationship_options(conn),
             )
@@ -331,6 +366,7 @@ def edit_entry(entry_id):
                 conn, entry_id, name, category, summary, content, author, new_image_filename,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
+                leader_id=leader_id, details=details,
             )
         elif remove_image and entry["image_filename"]:
             images.delete_upload(entry["image_filename"])
@@ -339,12 +375,14 @@ def edit_entry(entry_id):
                 conn, entry_id, name, category, summary, content, author,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
+                leader_id=leader_id, details=details,
             )
         else:
             models.update_entry(
                 conn, entry_id, name, category, summary, content, author,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
+                leader_id=leader_id, details=details,
             )
 
         return redirect(url_for("entry_detail", entry_id=entry_id))
@@ -365,6 +403,8 @@ def edit_entry(entry_id):
             "organization_id": entry["organization_id"],
             "region_id": entry["region_id"],
             "headquarters_city_id": entry["headquarters_city_id"],
+            "leader_id": entry["leader_id"],
+            **{col: entry[col] for col in models.DETAIL_COLUMNS},
         },
         **relationship_options(conn),
     )
@@ -378,6 +418,64 @@ def delete_entry_route(entry_id):
         images.delete_upload(entry["image_filename"])
     models.delete_entry(conn, entry_id)
     return redirect(url_for("index"))
+
+
+@app.route("/city-view")
+def city_view():
+    """A single page with a city dropdown that pulls together everything about
+    whichever city is selected — its own fields, its write-up, and every
+    Character/Organization connected to it (via dropdown or wiki-link) — so a
+    DM can flip between cities during a session without clicking through
+    separate entry pages."""
+    conn = get_conn()
+    cities = models.list_entries(conn, category="City")
+
+    city_id = request.args.get("city_id", type=int)
+    if city_id is None and cities:
+        city_id = cities[0]["id"]
+
+    selected_city = models.get_entry(conn, city_id) if city_id else None
+    if selected_city is not None and selected_city["category"] != "City":
+        selected_city = None
+
+    region = None
+    characters = []
+    organizations_display = []
+    rendered_summary = ""
+
+    if selected_city is not None:
+        if selected_city["region_id"]:
+            region = models.get_entry(conn, selected_city["region_id"])
+
+        all_backlinks = models.get_backlinks(conn, selected_city["id"])
+
+        char_stubs = models.merge_by_id(
+            models.get_characters_in_city(conn, selected_city["id"]),
+            [b for b in all_backlinks if b["category"] == "Character"],
+        )
+        characters = [models.get_entry(conn, row["id"]) for row in char_stubs]
+
+        org_stubs = models.merge_by_id(
+            models.get_organizations_in_city(conn, selected_city["id"]),
+            [b for b in all_backlinks if b["category"] == "Organization"],
+        )
+        for stub in org_stubs:
+            org = models.get_entry(conn, stub["id"])
+            leader = models.get_entry(conn, org["leader_id"]) if org["leader_id"] else None
+            organizations_display.append({"entry": org, "leader": leader})
+
+        if selected_city["content"]:
+            rendered_summary = render_wiki_content(selected_city["content"], conn)
+
+    return render_template(
+        "city_view.html",
+        cities=cities,
+        selected_city=selected_city,
+        region=region,
+        characters=characters,
+        organizations_display=organizations_display,
+        rendered_summary=rendered_summary,
+    )
 
 
 @app.route("/map")
