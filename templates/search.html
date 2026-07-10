@@ -1,8 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Search — Ascension Campaign Codex{% endblock %}
 {% block content %}
-<h1>Search results for “{{ query }}”</h1>
+<div class="page-header">
+  <h1>Search</h1>
+</div>
+
+<form method="get" action="{{ url_for('search') }}" class="entry-form search-filters-form">
+  <label>
+    Keyword
+    <input type="text" name="q" value="{{ query }}" placeholder="Search names, summaries, content…">
+  </label>
+  <label>
+    Category
+    <select name="category" onchange="this.form.submit()">
+      <option value="">All Categories</option>
+      {% for cat in categories %}
+        <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ category_labels.get(cat, cat) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  {% if category_filter_fields %}
+    {% for f in category_filter_fields %}
+      <label>
+        {{ f.label }}
+        <select name="{{ f.name }}">
+          <option value="">Any {{ f.label }}</option>
+          {% for opt in f.options %}
+            <option value="{{ opt }}" {% if active_filters.get(f.name) == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endfor %}
+  {% elif category %}
+    <p class="hint">{{ category_labels.get(category, category) }} has no filterable fields beyond Keyword.</p>
+  {% endif %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if query or category or active_filters %}
+      <a class="btn" href="{{ url_for('search') }}">Clear filters</a>
+    {% endif %}
+  </div>
+</form>
+
+<div class="divider"><span class="divider-mark"></span></div>
+
 {% if results %}
+  <p class="summary">{{ results|length }} result{{ '' if results|length == 1 else 's' }}.</p>
   <ul class="entry-list">
     {% for entry in results %}
       <li class="cat-{{ entry['category'].lower() }}">
@@ -11,15 +54,24 @@
         {% endif %}
         <div>
           <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
-          <span class="tag">{{ entry['category'] }}</span>
+          <span class="tag">{{ category_labels.get(entry['category'], entry['category']) }}</span>
           {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
         </div>
       </li>
     {% endfor %}
   </ul>
-{% elif query %}
-  <p class="empty-state">No entries match “{{ query }}”. <a href="{{ url_for('new_entry', name=query) }}">Create an entry called "{{ query }}"?</a></p>
+{% elif searched %}
+  <p class="empty-state">
+    No entries match those filters.
+    {% if query %}
+      {% if category %}
+        <a href="{{ url_for('new_entry', name=query, category=category) }}">Create an entry called "{{ query }}"?</a>
+      {% else %}
+        <a href="{{ url_for('new_entry', name=query) }}">Create an entry called "{{ query }}"?</a>
+      {% endif %}
+    {% endif %}
+  </p>
 {% else %}
-  <p class="empty-state">Type something in the search box above.</p>
+  <p class="empty-state">Type a keyword, pick a Category, or set a filter above to start searching.</p>
 {% endif %}
 {% endblock %}

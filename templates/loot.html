@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Loot Tracker — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-item{% endblock %}
+
+{% macro loot_table(rows, empty_hint) %}
+  {% if rows %}
+    <table class="related-table">
+      <thead>
+        <tr><th>Item</th><th>Type</th><th>Rarity</th><th>Status</th><th>Value (gp)</th></tr>
+      </thead>
+      <tbody>
+        {% for item in rows %}
+          <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %}">
+            <td><a href="{{ url_for('entry_detail', entry_id=item['id']) }}">{{ item['name'] }}</a></td>
+            <td>{{ item['item_type'] or '—' }}</td>
+            <td>{{ item['rarity'] or '—' }}</td>
+            <td>{{ item['item_status'] or 'In Possession' }}</td>
+            <td>{{ item['estimated_value'] or '—' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty-state">{{ empty_hint }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% block content %}
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/item.svg') }}" alt="">
+      <h1>Loot Tracker</h1>
+    </div>
+  </div>
+  <p class="summary">Every item the party's collected, grouped by who's holding it right now. Sold, spent, or lost items stay on the record for history but drop out of the total below.</p>
+</div>
+
+<div class="loot-total">
+  <span class="loot-total-label">Party Treasury</span>
+  <span class="loot-total-value">{{ total_value }} gp</span>
+</div>
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+{% for group in party_groups %}
+  <div class="related-block">
+    <h2>{{ group.holder['name'] }}'s Haul</h2>
+    {{ loot_table(group.entries, "Nothing carried yet — set this item's Current Holder to " ~ group.holder['name'] ~ " to list it here.") }}
+  </div>
+{% endfor %}
+
+{% if other_groups %}
+  <div class="divider"><span class="divider-mark"></span></div>
+  <h2>Held by Others (NPCs)</h2>
+  {% for group in other_groups %}
+    <div class="related-block">
+      <h2>{{ group.holder_name or 'Unknown' }}</h2>
+      {{ loot_table(group.entries, "") }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="divider"><span class="divider-mark"></span></div>
+
+<div class="related-block">
+  <h2>Unclaimed Items</h2>
+  {{ loot_table(unclaimed, "No unclaimed items — every Item either has a Current Holder set, or there's nothing loose lying around yet.") }}
+</div>
+{% endblock %}

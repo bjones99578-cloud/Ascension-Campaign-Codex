@@ -209,6 +209,16 @@ def build_entry_fields(data):
     char_class, subclass, level = _primary_class_info(data)
     alignment = ALIGNMENT_BY_ID.get(data.get("alignmentId"), "")
     player_name = (data.get("username") or "").strip()
+    personality_traits = (traits.get("personalityTraits") or "").strip()
+    # D&D Beyond's unofficial payload sometimes carries a "faith" field for a
+    # character's deity/patron -- straightforward to read when present, but
+    # not guaranteed across every character, hence the defensive .get. AC/HP/
+    # Speed/Passive Perception are deliberately NOT auto-filled here: D&D
+    # Beyond derives those client-side from equipped gear, ability scores,
+    # and a pile of conditional bonuses that this unofficial endpoint doesn't
+    # expose pre-computed, so guessing at them risks silently wrong combat
+    # stats -- better left as a quick manual entry after import.
+    deity_patron = (data.get("faith") or "").strip()
 
     # These map straight onto the Character category's DETAIL_FIELDS columns
     # (see models.py) so the New Entry form comes up with Species/Class/
@@ -233,6 +243,8 @@ def build_entry_fields(data):
         "character_status": "Alive",
         "is_player_character": "Yes",
         "player_name": player_name or None,
+        "personality_traits": personality_traits or None,
+        "deity_patron": deity_patron or None,
     }
 
     return {

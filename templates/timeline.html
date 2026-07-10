@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Timeline — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-sessionlog{% endblock %}
+{% block content %}
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/sessionlog.svg') }}" alt="">
+      <h1>Campaign Timeline</h1>
+    </div>
+  </div>
+  <p class="summary">The story so far, one session at a time, in play order. Each entry shows whichever Characters, Cities, Quests, and other entries that session's write-up mentions.</p>
+</div>
+
+{% if timeline_entries %}
+  <div class="timeline">
+    {% for te in timeline_entries %}
+      {% set s = te.session %}
+      <div class="timeline-entry">
+        <div class="timeline-marker"></div>
+        <div class="timeline-card">
+          <div class="timeline-card-header">
+            {% if s['session_number'] %}<span class="tag cat-sessionlog">Session {{ s['session_number'] }}</span>{% endif %}
+            {% if s['session_date'] %}<span class="timeline-date">{{ s['session_date'] }}</span>{% endif %}
+            {% if s['in_game_date'] %}<span class="timeline-date timeline-date-ingame">{{ s['in_game_date'] }}</span>{% endif %}
+          </div>
+          <h2><a href="{{ url_for('entry_detail', entry_id=s['id']) }}">{{ s['name'] }}</a></h2>
+          {% if s['summary'] %}<p class="summary">{{ s['summary'] }}</p>{% endif %}
+          {% if te.mentions %}
+            <div class="timeline-mentions">
+              {% for m in te.mentions %}
+                <a class="tag cat-{{ m['category'].lower() }}" href="{{ url_for('entry_detail', entry_id=m['id']) }}">{{ m['name'] }}</a>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="empty-state">No session logs yet — <a href="{{ url_for('new_entry', category='SessionLog') }}">write your first one</a> to start the timeline.</p>
+{% endif %}
+{% endblock %}

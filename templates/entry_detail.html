@@ -2,19 +2,148 @@
 {% block title %}{{ entry['name'] }} — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-{{ entry['category'].lower() }}{% endblock %}
 
-{% macro related_table(title, items, empty_hint) %}
+{% macro character_table(title, rows, empty_hint) %}
   <div class="related-block">
     <h2>{{ title }}</h2>
-    {% if items %}
+    {% if rows %}
       <table class="related-table">
         <thead>
-          <tr><th>Name</th><th>Summary</th></tr>
+          <tr><th>Name</th><th>Species</th><th>Class</th><th>Level</th><th>Status</th></tr>
         </thead>
         <tbody>
-          {% for item in items %}
+          {% for c in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></td>
+              <td>{{ c['species'] or '—' }}</td>
+              <td>{{ c['char_class'] or '—' }}{% if c['subclass'] %} <span class="table-subtext">({{ c['subclass'] }})</span>{% endif %}</td>
+              <td>{{ c['level'] or '—' }}</td>
+              <td>{{ c['character_status'] or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro faction_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Organization</th><th>Type</th><th>Leader</th><th>Status</th><th>Alignment</th><th>Disposition</th></tr>
+        </thead>
+        <tbody>
+          {% for od in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=od.entry['id']) }}">{{ od.entry['name'] }}</a></td>
+              <td>{{ od.entry['org_type'] or '—' }}</td>
+              <td>{% if od.leader %}<a href="{{ url_for('entry_detail', entry_id=od.leader['id']) }}">{{ od.leader['name'] }}</a>{% else %}—{% endif %}</td>
+              <td>{{ od.entry['org_status'] or '—' }}</td>
+              <td>{{ od.entry['alignment'] or '—' }}</td>
+              <td>{{ od.entry['disposition'] or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro quest_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Name</th><th>Status</th><th>Quest Giver</th><th>Reward</th></tr>
+        </thead>
+        <tbody>
+          {% for q in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=q['id']) }}">{{ q['name'] }}</a></td>
+              <td>{{ q['quest_status'] or '—' }}</td>
+              <td>{{ q['quest_giver'] or '—' }}</td>
+              <td>{{ q['reward'] or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro item_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Rarity</th><th>Value (gp)</th></tr>
+        </thead>
+        <tbody>
+          {% for item in rows %}
             <tr>
               <td><a href="{{ url_for('entry_detail', entry_id=item['id']) }}">{{ item['name'] }}</a></td>
-              <td>{{ item['summary'] or '' }}</td>
+              <td>{{ item['item_type'] or '—' }}</td>
+              <td>{{ item['rarity'] or '—' }}</td>
+              <td>{{ item['estimated_value'] or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro location_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Danger Level</th></tr>
+        </thead>
+        <tbody>
+          {% for loc in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=loc['id']) }}">{{ loc['name'] }}</a></td>
+              <td>{{ loc['location_type'] or '—' }}</td>
+              <td>{{ loc['danger_level'] or '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro city_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <h2>{{ title }}</h2>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Name</th><th>Settlement Size</th><th>Government</th><th>Population</th></tr>
+        </thead>
+        <tbody>
+          {% for city in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=city['id']) }}">{{ city['name'] }}</a></td>
+              <td>{{ city['settlement_size'] or '—' }}</td>
+              <td>{{ city['government'] or '—' }}</td>
+              <td>{{ city['population'] or '—' }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -34,7 +163,7 @@
           <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ entry['category'].lower() ~ '.svg') }}" alt="">
           <h1>{{ entry['name'] }}</h1>
         </div>
-        <span class="tag cat-{{ entry['category'].lower() }}">{{ entry['category'] }}</span>
+        <span class="tag cat-{{ entry['category'].lower() }}">{{ category_labels.get(entry['category'], entry['category']) }}</span>
         {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
       </div>
       <div class="entry-actions">
@@ -83,7 +212,17 @@
         <span><span class="relation-label">Headquartered in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.headquarters_city['id']) }}">{{ related_entities.headquarters_city['name'] }}</a></span>
       {% endif %}
       {% if related_entities.leader %}
-        <span><span class="relation-label">Led by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.leader['id']) }}">{{ related_entities.leader['name'] }}</a></span>
+        {% set leader_label = "Ruled by" if entry['category'] == "City" else "Led by" %}
+        <span><span class="relation-label">{{ leader_label }}:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.leader['id']) }}">{{ related_entities.leader['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.leading_organization %}
+        <span><span class="relation-label">Governed by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.leading_organization['id']) }}">{{ related_entities.leading_organization['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.current_holder %}
+        <span><span class="relation-label">Carried by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.current_holder['id']) }}">{{ related_entities.current_holder['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.controlling_org %}
+        <span><span class="relation-label">Controlled by:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.controlling_org['id']) }}">{{ related_entities.controlling_org['name'] }}</a></span>
       {% endif %}
     </div>
   {% endif %}
@@ -99,19 +238,28 @@
   {% if related %}
     <div class="divider"><span class="divider-mark"></span></div>
 
-    {% if related.characters is defined %}
-      {{ related_table("Characters", related.characters,
-          "No characters yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Home City, to list them here.") }}
-      {{ related_table("Notable Factions", related.factions,
+    {% if related.party_characters is defined %}
+      {{ character_table("Party Members", related.party_characters,
+          "No party members here yet — set a Character's Home City or Current City to this place, or add [[" ~ entry['name'] ~ "]] to their entry, to list them here.") }}
+      {{ character_table("Other Characters", related.npc_characters,
+          "No other characters yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Home City, to list them here.") }}
+      {{ faction_table("Notable Factions", related.factions_display,
           "No organizations yet — add [[" ~ entry['name'] ~ "]] to an organization's entry, or set it as their Headquarters City, to list it here.") }}
-      {{ related_table("Missions & Quests", related.quests,
+      {{ quest_table("Missions & Quests", related.quests_display,
           "No quests yet — add [[" ~ entry['name'] ~ "]] to a quest's entry to list it here.") }}
-    {% elif related.members is defined %}
-      {{ related_table("Members", related.members,
-          "No members yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
-    {% elif related.cities is defined %}
-      {{ related_table("Cities in this Region", related.cities,
+    {% elif related.party_members is defined %}
+      {{ character_table("Party Members", related.party_members,
+          "No party members belong to this organization yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
+      {{ character_table("Other Members", related.npc_members,
+          "No other members yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
+      {{ location_table("Controlled Locations", related.controlled_locations,
+          "No locations yet — add [[" ~ entry['name'] ~ "]] to a location's entry, or set it as their Controlling Organization, to list it here.") }}
+    {% elif related.cities_display is defined %}
+      {{ city_table("Cities in this Region", related.cities_display,
           "No cities yet — add [[" ~ entry['name'] ~ "]] to a city's entry, or set it as their Region, to list it here.") }}
+    {% elif related.carried_items is defined %}
+      {{ item_table("Carried Items", related.carried_items,
+          "No items yet — add [[" ~ entry['name'] ~ "]] to an item's entry, or set it as their Current Holder, to list it here.") }}
     {% endif %}
   {% endif %}
 
@@ -121,7 +269,7 @@
       {% if backlinks %}
         <ul class="entry-list compact">
           {% for b in backlinks %}
-            <li class="cat-{{ b['category'].lower() }}"><a href="{{ url_for('entry_detail', entry_id=b['id']) }}">{{ b['name'] }}</a> <span class="tag cat-{{ b['category'].lower() }}">{{ b['category'] }}</span></li>
+            <li class="cat-{{ b['category'].lower() }}"><a href="{{ url_for('entry_detail', entry_id=b['id']) }}">{{ b['name'] }}</a> <span class="tag cat-{{ b['category'].lower() }}">{{ category_labels.get(b['category'], b['category']) }}</span></li>
           {% endfor %}
         </ul>
       {% else %}

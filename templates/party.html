@@ -37,6 +37,14 @@
           {% if c['character_status'] %}
             <div><dt>Status</dt><dd>{{ c['character_status'] }}</dd></div>
           {% endif %}
+          {% set combat_parts = [] %}
+          {% if c['armor_class'] %}{% set _ = combat_parts.append('AC ' ~ c['armor_class']) %}{% endif %}
+          {% if c['hit_points'] %}{% set _ = combat_parts.append('HP ' ~ c['hit_points']) %}{% endif %}
+          {% if c['speed'] %}{% set _ = combat_parts.append(c['speed'] ~ ' ft.') %}{% endif %}
+          {% if c['passive_perception'] %}{% set _ = combat_parts.append('PP ' ~ c['passive_perception']) %}{% endif %}
+          {% if combat_parts %}
+            <div><dt>Combat</dt><dd>{{ combat_parts|join(' · ') }}</dd></div>
+          {% endif %}
           {% if card.home_city %}
             <div><dt>Home City</dt><dd><a href="{{ url_for('entry_detail', entry_id=card.home_city['id']) }}">{{ card.home_city['name'] }}</a></dd></div>
           {% endif %}

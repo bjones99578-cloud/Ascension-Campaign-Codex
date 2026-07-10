@@ -50,16 +50,16 @@
       {% endif %}
     </div>
 
-    <div class="watchboard-columns">
       <div class="related-block">
-        <h2>Characters in {{ selected_city['name'] }}</h2>
-        {% if characters %}
+        <h2>Party Members in {{ selected_city['name'] }}</h2>
+        {% if party_characters %}
           <table class="related-table">
-            <thead><tr><th>Name</th><th>Class</th><th>Level</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Species</th><th>Class</th><th>Level</th><th>Status</th></tr></thead>
             <tbody>
-              {% for c in characters %}
+              {% for c in party_characters %}
                 <tr>
                   <td><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></td>
+                  <td>{{ c['species'] or '—' }}</td>
                   <td>{{ c['char_class'] or '—' }}</td>
                   <td>{{ c['level'] or '—' }}</td>
                   <td>{{ c['character_status'] or '—' }}</td>
@@ -68,7 +68,29 @@
             </tbody>
           </table>
         {% else %}
-          <p class="empty-state">No characters linked to this city yet — set it as a Character's Home City, or link with <code>[[{{ selected_city['name'] }}]]</code>.</p>
+          <p class="empty-state">No party members here right now — set a Character's Home City or Current City to this place to list them here.</p>
+        {% endif %}
+      </div>
+
+      <div class="related-block">
+        <h2>Other Characters in {{ selected_city['name'] }}</h2>
+        {% if npc_characters %}
+          <table class="related-table">
+            <thead><tr><th>Name</th><th>Species</th><th>Class</th><th>Level</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for c in npc_characters %}
+                <tr>
+                  <td><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></td>
+                  <td>{{ c['species'] or '—' }}</td>
+                  <td>{{ c['char_class'] or '—' }}</td>
+                  <td>{{ c['level'] or '—' }}</td>
+                  <td>{{ c['character_status'] or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-state">No other characters linked to this city yet — set it as a Character's Home City, or link with <code>[[{{ selected_city['name'] }}]]</code>.</p>
         {% endif %}
       </div>
 
@@ -76,7 +98,7 @@
         <h2>Organizations in {{ selected_city['name'] }}</h2>
         {% if organizations_display %}
           <table class="related-table">
-            <thead><tr><th>Organization</th><th>Type</th><th>Leader</th><th>Status</th><th>Alignment</th></tr></thead>
+            <thead><tr><th>Organization</th><th>Type</th><th>Leader</th><th>Status</th><th>Alignment</th><th>Disposition</th></tr></thead>
             <tbody>
               {% for od in organizations_display %}
                 <tr>
@@ -89,6 +111,7 @@
                   </td>
                   <td>{{ od.entry['org_status'] or '—' }}</td>
                   <td>{{ od.entry['alignment'] or '—' }}</td>
+                  <td>{{ od.entry['disposition'] or '—' }}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -97,7 +120,6 @@
           <p class="empty-state">No organizations linked to this city yet — set it as an Organization's Headquarters City, or link with <code>[[{{ selected_city['name'] }}]]</code>.</p>
         {% endif %}
       </div>
-    </div>
   </div>
 {% endif %}
 {% endblock %}

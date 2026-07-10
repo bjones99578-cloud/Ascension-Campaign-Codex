@@ -1,6 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ category_plurals.get(category, category + 's') }} — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-{{ category.lower() }}{% endblock %}
+
+{% macro character_rows(rows) %}
+  <table class="related-table entry-data-table">
+    <thead>
+      <tr><th>Name</th><th>Species</th><th>Class</th><th>Level</th><th>Status</th><th>Home City</th><th>Summary</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        {% set e = row.entry %}
+        <tr>
+          <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+          <td>{{ e['species'] or '—' }}</td>
+          <td>{{ e['char_class'] or '—' }}{% if e['subclass'] %} <span class="table-subtext">({{ e['subclass'] }})</span>{% endif %}</td>
+          <td>{{ e['level'] or '—' }}</td>
+          <td>{{ e['character_status'] or '—' }}</td>
+          <td>{% if row.home_city %}<a href="{{ url_for('entry_detail', entry_id=row.home_city['id']) }}">{{ row.home_city['name'] }}</a>{% else %}—{% endif %}</td>
+          <td>{{ e['summary'] or '' }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endmacro %}
+
 {% block content %}
 <div class="themed-banner">
   <div class="page-header">
@@ -8,24 +31,186 @@
       <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ category.lower() ~ '.svg') }}" alt="">
       <h1>{{ category_plurals.get(category, category + 's') }}</h1>
     </div>
-    <a class="new-entry-btn" href="{{ url_for('new_entry', category=category) }}">+ New {{ category }}</a>
+    <a class="new-entry-btn" href="{{ url_for('new_entry', category=category) }}">+ New {{ category_labels.get(category, category) }}</a>
   </div>
 </div>
 
 {% if entries %}
-  <ul class="entry-list">
-    {% for entry in entries %}
-      <li>
-        {% if entry['image_filename'] %}
-          <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
-        {% endif %}
-        <div>
-          <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
-          {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
-        </div>
-      </li>
-    {% endfor %}
-  </ul>
+  {% if category == "Character" %}
+    {# Party Members get their own table, separate from NPCs/other characters,
+       so the roster's core cast doesn't get lost in a long character list. #}
+    <h2>Party Members</h2>
+    {% if party_members %}
+      {{ character_rows(party_members) }}
+    {% else %}
+      <p class="empty-state">No party members yet — mark a Character's "Party Member" field as Yes to list them here.</p>
+    {% endif %}
+
+    <div class="divider"><span class="divider-mark"></span></div>
+
+    <h2>Other Characters</h2>
+    {% if npcs %}
+      {{ character_rows(npcs) }}
+    {% else %}
+      <p class="empty-state">No other characters yet.</p>
+    {% endif %}
+
+  {% elif category == "City" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Region</th><th>Settlement Size</th><th>Government</th><th>Population</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          {% set region = related_names.get(e['id'], {}).region %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{% if region %}<a href="{{ url_for('entry_detail', entry_id=region['id']) }}">{{ region['name'] }}</a>{% else %}—{% endif %}</td>
+            <td>{{ e['settlement_size'] or '—' }}</td>
+            <td>{{ e['government'] or '—' }}</td>
+            <td>{{ e['population'] or '—' }}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "Organization" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Alignment</th><th>Status</th><th>Disposition</th><th>Headquarters</th><th>Leader</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          {% set names = related_names.get(e['id'], {}) %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{{ e['org_type'] or '—' }}</td>
+            <td>{{ e['alignment'] or '—' }}</td>
+            <td>{{ e['org_status'] or '—' }}</td>
+            <td>{{ e['disposition'] or '—' }}</td>
+            <td>{% if names.headquarters_city %}<a href="{{ url_for('entry_detail', entry_id=names.headquarters_city['id']) }}">{{ names.headquarters_city['name'] }}</a>{% else %}—{% endif %}</td>
+            <td>{% if names.leader %}<a href="{{ url_for('entry_detail', entry_id=names.leader['id']) }}">{{ names.leader['name'] }}</a>{% else %}—{% endif %}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "Region" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Terrain</th><th>Climate</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{{ e['terrain'] or '—' }}</td>
+            <td>{{ e['climate'] or '—' }}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "Location" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Danger Level</th><th>Controlled By</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          {% set names = related_names.get(e['id'], {}) %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{{ e['location_type'] or '—' }}</td>
+            <td>{{ e['danger_level'] or '—' }}</td>
+            <td>{% if names.controlling_org %}<a href="{{ url_for('entry_detail', entry_id=names.controlling_org['id']) }}">{{ names.controlling_org['name'] }}</a>{% else %}—{% endif %}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "Item" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Rarity</th><th>Attunement</th><th>Current Holder</th><th>Value (gp)</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          {% set names = related_names.get(e['id'], {}) %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{{ e['item_type'] or '—' }}</td>
+            <td>{{ e['rarity'] or '—' }}</td>
+            <td>{{ e['requires_attunement'] or '—' }}</td>
+            <td>{% if names.current_holder %}<a href="{{ url_for('entry_detail', entry_id=names.current_holder['id']) }}">{{ names.current_holder['name'] }}</a>{% else %}—{% endif %}</td>
+            <td>{{ e['estimated_value'] or '—' }}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "Quest" %}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Name</th><th>Status</th><th>Difficulty</th><th>Level Range</th><th>Quest Giver</th><th>Reward</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></td>
+            <td>{{ e['quest_status'] or '—' }}</td>
+            <td>{{ e['difficulty'] or '—' }}</td>
+            <td>{{ e['level_range'] or '—' }}</td>
+            <td>{{ e['quest_giver'] or '—' }}</td>
+            <td>{{ e['reward'] or '—' }}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% elif category == "SessionLog" %}
+    {# Already sorted most-recent-first by the route (see category_view). #}
+    <table class="related-table entry-data-table">
+      <thead>
+        <tr><th>Session</th><th>Session Date</th><th>In-Game Date</th><th>Summary</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+          <tr>
+            <td>
+              <a href="{{ url_for('entry_detail', entry_id=e['id']) }}">
+                {% if e['session_number'] %}#{{ e['session_number'] }} — {% endif %}{{ e['name'] }}
+              </a>
+            </td>
+            <td>{{ e['session_date'] or '—' }}</td>
+            <td>{{ e['in_game_date'] or '—' }}</td>
+            <td>{{ e['summary'] or '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  {% else %}
+    <ul class="entry-list">
+      {% for entry in entries %}
+        <li>
+          {% if entry['image_filename'] %}
+            <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+          {% endif %}
+          <div>
+            <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
+            {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 {% else %}
   <p class="empty-state">No {{ category_plurals.get(category, category + 's').lower() }} yet. <a href="{{ url_for('new_entry', category=category) }}">Add the first one</a>.</p>
 {% endif %}

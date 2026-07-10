@@ -30,6 +30,14 @@
       <img class="cat-icon" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
       Party Roster
     </a>
+    <a href="{{ url_for('loot_tracker') }}" class="cat-item {% if request.path == url_for('loot_tracker') %}active{% endif %}">
+      <img class="cat-icon" src="{{ url_for('static', filename='icons/item.svg') }}" alt="">
+      Loot Tracker
+    </a>
+    <a href="{{ url_for('timeline') }}" class="cat-sessionlog {% if request.path == url_for('timeline') %}active{% endif %}">
+      <img class="cat-icon" src="{{ url_for('static', filename='icons/sessionlog.svg') }}" alt="">
+      Timeline
+    </a>
     {% for cat in categories %}
       <a href="{{ url_for('category_view', category=cat) }}"
          class="cat-{{ cat.lower() }} {% if request.path == url_for('category_view', category=cat) %}active{% endif %}">

@@ -12,6 +12,7 @@ CATEGORIES = [
     "Location",
     "Item",
     "Quest",
+    "SessionLog",
 ]
 
 CATEGORY_PLURALS = {
@@ -22,6 +23,20 @@ CATEGORY_PLURALS = {
     "Location": "Locations",
     "Item": "Items",
     "Quest": "Quests",
+    "SessionLog": "Session Logs",
+}
+
+# "SessionLog" is stored/URLed as one word (like every other category) so it
+# plays nicely with the "cat-{{ category.lower() }}" CSS-class and
+# "icons/{{ category.lower() }}.svg" conventions used throughout the
+# templates -- but it should still read as "Session Log" (with a space)
+# anywhere the *singular* category name is shown to a person, e.g. the New
+# Entry category dropdown or an entry's category tag. CATEGORY_PLURALS
+# already solves this for the plural case; this is the singular equivalent,
+# with the same `.get(cat, cat)` fallback so every other (already-fine)
+# category is unaffected.
+CATEGORY_LABELS = {
+    "SessionLog": "Session Log",
 }
 
 LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
@@ -30,11 +45,16 @@ LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
 # entry (as opposed to relationships inferred from [[wiki links]] in prose).
 # Each is nullable and only meaningful for entries of a particular category:
 #   home_city_id, organization_id, current_city_id -> Character
-#   region_id                     -> City
+#   region_id, leading_organization_id             -> City
 #   headquarters_city_id, leader_id -> Organization (leader_id points at a Character)
+#   leader_id is also reused by City, for the same reason "alignment" is
+#   shared by Character and Organization -- it's the same concept ("the
+#   Character who leads this") regardless of which category it's attached to.
+#   current_holder_id -> Item (which Character is currently carrying it)
+#   controlling_org_id -> Location (which Organization controls/owns it)
 RELATIONSHIP_COLUMNS = (
     "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-    "current_city_id",
+    "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
 )
 
 # Party roster: a fixed 5-slot lineup of Player Characters, managed separately
@@ -82,6 +102,11 @@ GOVERNMENT_OPTIONS = [
     "Magocracy", "Anarchy/Lawless", "Other",
 ]
 
+# A City's stance toward the party -- drives the World Map pin color (blue
+# for Friendly, red for Hostile, the default gold for Neutral/unset) and
+# shows up as a normal detail field everywhere else a City appears.
+DISPOSITION_OPTIONS = ["Friendly", "Neutral", "Hostile"]
+
 ORG_TYPE_OPTIONS = [
     "Guild", "Religious Order", "Military Order", "Criminal Syndicate",
     "Noble House", "Adventuring Company", "Mercantile Company",
@@ -112,7 +137,15 @@ RARITY_OPTIONS = ["Mundane", "Common", "Uncommon", "Rare", "Very Rare", "Legenda
 
 ATTUNEMENT_OPTIONS = ["Yes", "No"]
 
+# Tracks what happened to a piece of loot over time -- "In Possession" is the
+# only status that counts toward the Loot Tracker's current gold total (see
+# get_loot_summary); everything else is history (sold off, handed away, used
+# up, destroyed, or lost) that still stays on the record for reference.
+ITEM_STATUS_OPTIONS = ["In Possession", "Sold", "Given Away", "Used/Consumed", "Destroyed", "Lost"]
+
 QUEST_STATUS_OPTIONS = ["Not Started", "Active", "Completed", "Failed", "Abandoned"]
+
+QUEST_DIFFICULTY_OPTIONS = ["Easy", "Medium", "Hard", "Deadly"]
 
 CHARACTER_STATUS_OPTIONS = ["Alive", "Dead", "Missing", "Retired"]
 
@@ -154,16 +187,27 @@ DETAIL_FIELDS = {
         {"name": "player_name", "label": "Player Name", "type": "text"},
         {"name": "subclass", "label": "Subclass", "type": "text"},
         {"name": "key_item", "label": "Key Item", "type": "text"},
+        {"name": "armor_class", "label": "Armor Class (AC)", "type": "number", "min": 0, "max": 40},
+        {"name": "hit_points", "label": "Hit Points (HP)", "type": "number", "min": 0},
+        {"name": "speed", "label": "Speed (ft.)", "type": "number", "min": 0},
+        {"name": "passive_perception", "label": "Passive Perception", "type": "number", "min": 0},
+        {"name": "deity_patron", "label": "Deity / Patron", "type": "text"},
+        {"name": "personality_traits", "label": "Personality Traits", "type": "text"},
     ],
     "City": [
         {"name": "settlement_size", "label": "Settlement Size", "type": "select", "options": SETTLEMENT_SIZE_OPTIONS},
         {"name": "government", "label": "Government", "type": "select", "options": GOVERNMENT_OPTIONS},
         {"name": "population", "label": "Population", "type": "number", "min": 0},
+        {"name": "disposition", "label": "Disposition", "type": "select", "options": DISPOSITION_OPTIONS},
     ],
     "Organization": [
         {"name": "org_type", "label": "Organization Type", "type": "select", "options": ORG_TYPE_OPTIONS},
         {"name": "alignment", "label": "Alignment", "type": "select", "options": ALIGNMENT_OPTIONS},
         {"name": "org_status", "label": "Status", "type": "select", "options": ORG_STATUS_OPTIONS},
+        # Shares the "disposition" column with City -- same field, same three
+        # options, same map-pin-coloring precedent as "alignment"/"leader"
+        # being shared across categories elsewhere in this file.
+        {"name": "disposition", "label": "Disposition", "type": "select", "options": DISPOSITION_OPTIONS},
     ],
     "Region": [
         {"name": "terrain", "label": "Terrain", "type": "select", "options": TERRAIN_OPTIONS},
@@ -177,11 +221,29 @@ DETAIL_FIELDS = {
         {"name": "item_type", "label": "Item Type", "type": "select", "options": ITEM_TYPE_OPTIONS},
         {"name": "rarity", "label": "Rarity", "type": "select", "options": RARITY_OPTIONS},
         {"name": "requires_attunement", "label": "Requires Attunement", "type": "select", "options": ATTUNEMENT_OPTIONS},
+        {"name": "estimated_value", "label": "Estimated Value (gp)", "type": "number", "min": 0},
+        {"name": "item_status", "label": "Status", "type": "select", "options": ITEM_STATUS_OPTIONS},
     ],
     "Quest": [
         {"name": "quest_status", "label": "Status", "type": "select", "options": QUEST_STATUS_OPTIONS},
         {"name": "quest_giver", "label": "Quest Giver", "type": "text"},
         {"name": "reward", "label": "Reward", "type": "text"},
+        {"name": "difficulty", "label": "Difficulty", "type": "select", "options": QUEST_DIFFICULTY_OPTIONS},
+        {"name": "level_range", "label": "Level Range", "type": "text"},
+        {"name": "xp_reward", "label": "XP Reward", "type": "number", "min": 0},
+        {"name": "gold_reward", "label": "Gold Reward (gp)", "type": "number", "min": 0},
+    ],
+    "SessionLog": [
+        {"name": "session_number", "label": "Session #", "type": "number", "min": 1},
+        # A real HTML date input (stored as an ISO "YYYY-MM-DD" string, which
+        # also happens to sort correctly as plain text) -- the real-world
+        # date the session was played, for ordering the log chronologically.
+        {"name": "session_date", "label": "Session Date", "type": "date"},
+        # Free text rather than another date picker: most campaigns run on a
+        # custom fantasy calendar ("the 15th of Highsun, 1492"), not the real
+        # Gregorian calendar, so this stays flexible instead of forcing a
+        # format that wouldn't fit most settings.
+        {"name": "in_game_date", "label": "In-Game Date", "type": "text"},
     ],
 }
 
@@ -191,7 +253,10 @@ DETAIL_FIELDS = {
 DETAIL_COLUMNS = sorted({f["name"] for fields in DETAIL_FIELDS.values() for f in fields})
 
 # Columns that store a number rather than text.
-DETAIL_INT_COLUMNS = {"level", "population"}
+DETAIL_INT_COLUMNS = {
+    "level", "population", "armor_class", "hit_points", "speed", "passive_perception",
+    "estimated_value", "xp_reward", "gold_reward", "session_number",
+}
 
 # field name -> its built-in option list, used to tell a genuinely new custom
 # value apart from one that just matches a built-in option under different
@@ -290,6 +355,7 @@ def init_db():
             headquarters_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             leader_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             current_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            leading_organization_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             pc_slot INTEGER,
             {detail_column_defs},
             created_at TEXT NOT NULL,
@@ -323,6 +389,9 @@ def init_db():
             entry_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
             x REAL NOT NULL,
             y REAL NOT NULL,
+            symbol TEXT,
+            color TEXT,
+            discovered INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL
         );
 
@@ -351,6 +420,18 @@ def init_db():
             conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER")
         else:
             conn.execute(f"ALTER TABLE entry ADD COLUMN {col} TEXT")
+    # Same lightweight-migration approach for map_pin: databases created before
+    # Character pins existed won't have these columns yet (City pins never
+    # used them, so they're NULL there — that's expected, not a migration gap).
+    existing_pin_cols = {row["name"] for row in conn.execute("PRAGMA table_info(map_pin)")}
+    for col in ("symbol", "color"):
+        if col not in existing_pin_cols:
+            conn.execute(f"ALTER TABLE map_pin ADD COLUMN {col} TEXT")
+    if "discovered" not in existing_pin_cols:
+        # Pins placed before "Discovered" existed were, by definition, always
+        # visible on the map -- so they migrate in as discovered (1), not
+        # hidden, to avoid retroactively fogging out a party's existing map.
+        conn.execute("ALTER TABLE map_pin ADD COLUMN discovered INTEGER NOT NULL DEFAULT 1")
     conn.commit()
     conn.close()
 
@@ -383,7 +464,13 @@ def get_entry(conn, entry_id):
     return conn.execute("SELECT * FROM entry WHERE id = ?", (entry_id,)).fetchone()
 
 
-def list_entries(conn, category=None, query=None):
+def list_entries(conn, category=None, query=None, filters=None):
+    """filters: an optional {column_name: value} dict of exact-match detail-field
+    filters (e.g. {"disposition": "Hostile", "character_status": "Alive"}) --
+    used by the Search page's per-category filter dropdowns, layered on top of
+    the free-text query and/or category. Column names always come from
+    DETAIL_COLUMNS (never raw user input), so building the SQL with an
+    f-string here is safe -- only the values themselves are parameterized."""
     sql = "SELECT * FROM entry WHERE 1=1"
     params = []
     if category:
@@ -393,6 +480,11 @@ def list_entries(conn, category=None, query=None):
         sql += " AND (name LIKE ? OR summary LIKE ? OR content LIKE ?)"
         like = f"%{query}%"
         params.extend([like, like, like])
+    for col, value in (filters or {}).items():
+        if col not in DETAIL_COLUMNS or not value:
+            continue
+        sql += f" AND {col} = ?"
+        params.append(value)
     sql += " ORDER BY name COLLATE NOCASE ASC"
     return conn.execute(sql, params).fetchall()
 
@@ -405,6 +497,27 @@ def category_counts(conn):
     for row in rows:
         counts[row["category"]] = row["n"]
     return counts
+
+
+def get_entries_by_ids(conn, ids):
+    """Bulk-fetch entries by id as an {id: row} dict, in one query -- used to
+    resolve a batch of relationship ids (Home City, Region, Leader, etc.) when
+    building a listing table, instead of one query per row."""
+    ids = [i for i in set(ids) if i]
+    if not ids:
+        return {}
+    placeholders = ", ".join("?" * len(ids))
+    rows = conn.execute(f"SELECT * FROM entry WHERE id IN ({placeholders})", ids).fetchall()
+    return {row["id"]: row for row in rows}
+
+
+def split_party_members(rows):
+    """Partition a list of Character rows into (party_members, others), used
+    everywhere a page lists Characters -- keeps party members visually and
+    structurally separate from NPCs/other characters for clarity."""
+    party = [r for r in rows if r["is_player_character"] == "Yes"]
+    others = [r for r in rows if r["is_player_character"] != "Yes"]
+    return party, others
 
 
 def merge_by_id(*lists):
@@ -510,27 +623,72 @@ def get_cities_in_region(conn, region_id):
     ).fetchall()
 
 
+def get_items_held_by(conn, character_id):
+    """Every Item whose Current Holder dropdown points at this Character --
+    shown as a "Carried Items" table on the Character's own page, the same
+    dropdown-relationship-plus-backlink pattern used everywhere else (Home
+    City, Headquarters City, Region, etc.)."""
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Item' AND current_holder_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (character_id,),
+    ).fetchall()
+
+
+def get_locations_controlled_by(conn, organization_id):
+    """Every Location whose Controlling Organization dropdown points at this
+    Organization -- shown as a "Controlled Locations" table on the
+    Organization's own page."""
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Location' AND controlling_org_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (organization_id,),
+    ).fetchall()
+
+
+DEFAULT_CHARACTER_PIN_SYMBOL = "★"
+DEFAULT_CHARACTER_PIN_COLOR = "#a78bfa"  # matches the Character category's own violet theme
+
+
 def get_map_pins(conn):
-    """Every pin on the shared world map, joined with just enough of its
-    City's own fields to render a clickable marker and a "very basic
-    information" hover tooltip without a second query per pin."""
+    """Every pin on the shared world map. Pins can mark a City, a Character,
+    or an Organization -- all three live in the same `entry` table, so one
+    query pulls whatever columns apply to each pin's own category:
+      - City pins: the city's Leader (or, lacking one, its Leading
+        Organization) and its Settlement Size, plus its Disposition, which
+        drives the pin's color (Friendly = blue, Hostile = red,
+        Neutral/unset = the default gold).
+      - Character pins: the character's own free-picked symbol and color
+        (from the pin-placement form), plus their Status for the tooltip.
+      - Organization pins: the same Disposition-driven coloring as City
+        pins (so a hostile guild's hideout reads red just like a hostile
+        city), plus its Leader and Organization Type for the tooltip.
+    All resolved in one query rather than one round-trip per pin."""
     return conn.execute(
         """
         SELECT map_pin.id AS pin_id, map_pin.x AS x, map_pin.y AS y, map_pin.entry_id AS entry_id,
-               city.name AS city_name, city.settlement_size AS settlement_size,
-               city.population AS population, region.name AS region_name
+               map_pin.symbol AS symbol, map_pin.color AS color,
+               map_pin.discovered AS discovered,
+               e.name AS entry_name, e.category AS entry_category,
+               e.settlement_size AS settlement_size,
+               e.disposition AS disposition,
+               e.character_status AS character_status,
+               e.org_type AS org_type,
+               leader.name AS leader_name,
+               leading_org.name AS leading_org_name
         FROM map_pin
-        JOIN entry city ON city.id = map_pin.entry_id
-        LEFT JOIN entry region ON region.id = city.region_id
+        JOIN entry e ON e.id = map_pin.entry_id
+        LEFT JOIN entry leader ON leader.id = e.leader_id
+        LEFT JOIN entry leading_org ON leading_org.id = e.leading_organization_id
         ORDER BY map_pin.id ASC
         """
     ).fetchall()
 
 
-def add_map_pin(conn, entry_id, x, y):
+def add_map_pin(conn, entry_id, x, y, symbol=None, color=None, discovered=1):
     cur = conn.execute(
-        "INSERT INTO map_pin (entry_id, x, y, created_at) VALUES (?, ?, ?, ?)",
-        (entry_id, x, y, now_iso()),
+        "INSERT INTO map_pin (entry_id, x, y, symbol, color, discovered, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (entry_id, x, y, symbol, color, discovered, now_iso()),
     )
     conn.commit()
     return cur.lastrowid
@@ -539,6 +697,53 @@ def add_map_pin(conn, entry_id, x, y):
 def delete_map_pin(conn, pin_id):
     conn.execute("DELETE FROM map_pin WHERE id = ?", (pin_id,))
     conn.commit()
+
+
+def set_pin_discovered(conn, pin_id, discovered):
+    """DM-only toggle: flip whether a pin has been discovered by the party
+    yet. Undiscovered pins (discovered=0) are fully hidden from the default
+    player-facing map view and only appear -- with a "hidden from players"
+    visual treatment -- when DM Mode is switched on."""
+    conn.execute(
+        "UPDATE map_pin SET discovered = ? WHERE id = ?",
+        (1 if discovered else 0, pin_id),
+    )
+    conn.commit()
+
+
+def get_outgoing_links(conn, entry_id):
+    """Every resolved [[wiki link]] target FROM a given entry's own content --
+    the mirror image of get_backlinks (which shows what links TO an entry).
+    Used by the Timeline view to show which Characters, Cities, Quests, etc.
+    a given Session Log entry's write-up actually mentions, reusing the link
+    table that's already populated by sync_links -- no separate relationship
+    field needed."""
+    return conn.execute(
+        """
+        SELECT DISTINCT e.id, e.name, e.category
+        FROM link l
+        JOIN entry e ON e.id = l.target_id
+        WHERE l.source_id = ? AND l.target_id IS NOT NULL
+        ORDER BY e.name COLLATE NOCASE ASC
+        """,
+        (entry_id,),
+    ).fetchall()
+
+
+def get_all_items_with_holders(conn):
+    """Every Item, joined with its Current Holder's name and Party Member
+    flag in one query -- the Loot Tracker page groups this single result set
+    into Party-held / Other-held / Unclaimed sections rather than issuing a
+    separate query per holder."""
+    return conn.execute(
+        """
+        SELECT entry.*, holder.name AS holder_name, holder.is_player_character AS holder_is_pc
+        FROM entry
+        LEFT JOIN entry holder ON holder.id = entry.current_holder_id
+        WHERE entry.category = 'Item'
+        ORDER BY entry.name COLLATE NOCASE ASC
+        """
+    ).fetchall()
 
 
 def get_player_characters(conn):
@@ -553,7 +758,9 @@ def get_player_characters(conn):
 
 def create_entry(conn, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
-                  leader_id=None, current_city_id=None, pc_slot=None, details=None):
+                  leader_id=None, current_city_id=None, leading_organization_id=None,
+                  current_holder_id=None, controlling_org_id=None,
+                  pc_slot=None, details=None):
     """details: dict mapping a DETAIL_COLUMNS column name to its value (or None) —
     the typical D&D fields (Species, Class, Alignment, etc.) relevant to whichever
     category this entry is. Columns not relevant to this category are simply
@@ -564,13 +771,14 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
     base_cols = [
         "name", "category", "summary", "content", "author", "image_filename",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "pc_slot",
-        "created_at", "updated_at",
+        "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
+        "pc_slot", "created_at", "updated_at",
     ]
     base_vals = [
         name.strip(), category, summary.strip(), content, author.strip(), image_filename,
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, pc_slot, ts, ts,
+        current_city_id, leading_organization_id, current_holder_id, controlling_org_id,
+        pc_slot, ts, ts,
     ]
     all_cols = base_cols + DETAIL_COLUMNS
     all_vals = base_vals + [details.get(col) for col in DETAIL_COLUMNS]
@@ -587,7 +795,9 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
 
 def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
-                  leader_id=None, current_city_id=None, pc_slot=None, details=None):
+                  leader_id=None, current_city_id=None, leading_organization_id=None,
+                  current_holder_id=None, controlling_org_id=None,
+                  pc_slot=None, details=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
     leave whatever image is already set untouched (use clear_entry_image to remove it).
     The relationship ids (home_city_id, etc.) and the details dict (Species, Class,
@@ -601,12 +811,14 @@ def update_entry(conn, entry_id, name, category, summary, content, author, image
     set_cols = [
         "name", "category", "summary", "content", "author",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "pc_slot",
+        "current_city_id", "leading_organization_id", "current_holder_id", "controlling_org_id",
+        "pc_slot",
     ]
     set_vals = [
         name.strip(), category, summary.strip(), content, author.strip(),
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, pc_slot,
+        current_city_id, leading_organization_id, current_holder_id, controlling_org_id,
+        pc_slot,
     ]
     if image_filename is not None:
         set_cols.append("image_filename")

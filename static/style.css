@@ -42,6 +42,7 @@
 .cat-location     { --cat-color: #22d3ee; --cat-light: #a5f3fc; --cat-glow: rgba(34, 211, 238, 0.35); }
 .cat-item         { --cat-color: #fb923c; --cat-light: #fed7aa; --cat-glow: rgba(251, 146, 60, 0.35); }
 .cat-quest        { --cat-color: #818cf8; --cat-light: #e0e7ff; --cat-glow: rgba(129, 140, 248, 0.35); }
+.cat-sessionlog   { --cat-color: #94a3b8; --cat-light: #cbd5e1; --cat-glow: rgba(148, 163, 184, 0.35); }
 
 /* ---------- per-class party themes (Player Character roster only) ---------- */
 /* Reuses the same --cat-* properties, so a class-<slug> wrapper re-tints the
@@ -479,6 +480,8 @@ code {
 .related-table tr:last-child td { border-bottom: none; }
 .related-table td { color: var(--text-muted); }
 .related-table td:first-child { color: var(--text); }
+.table-subtext { color: var(--text-muted); font-size: 0.85em; }
+.related-block + .related-block { margin-top: 2rem; }
 
 .btn {
   display: inline-block;
@@ -668,6 +671,89 @@ code {
   border-radius: var(--radius);
 }
 
+/* ---------- loot tracker ---------- */
+
+.loot-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--cat-color);
+  border-radius: var(--radius);
+  background: rgba(251, 146, 60, 0.08);
+  box-shadow: 0 0 16px var(--cat-glow);
+  margin-bottom: 1.5rem;
+}
+.loot-total-label {
+  font-family: var(--font-heading);
+  font-weight: bold;
+  color: var(--cat-light);
+}
+.loot-total-value {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--cat-light);
+}
+/* Items that have been sold/given away/used/destroyed/lost still show up
+   for the record, but visually recede -- they're history, not part of the
+   current gold total above them. */
+.loot-row-history { opacity: 0.55; }
+.loot-row-history td { text-decoration: line-through; text-decoration-color: var(--text-muted); }
+
+/* ---------- timeline ---------- */
+
+.timeline {
+  position: relative;
+  margin-left: 10px;
+  padding-left: 2rem;
+  border-left: 2px solid var(--border-soft);
+}
+.timeline-entry {
+  position: relative;
+  margin-bottom: 2rem;
+}
+.timeline-marker {
+  position: absolute;
+  left: calc(-2rem - 7px);
+  top: 0.4rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--cat-color);
+  border: 2px solid var(--parchment);
+  box-shadow: 0 0 10px 2px var(--cat-glow);
+}
+.timeline-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.timeline-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.timeline-date {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.timeline-date-ingame { font-style: italic; }
+.timeline-card h2 { margin: 0.2rem 0 0.3rem; }
+.timeline-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--border-soft);
+}
+.timeline-mentions .tag { text-decoration: none; }
+
 /* ---------- map ---------- */
 
 .map-preview {
@@ -741,6 +827,12 @@ code {
   transform: translate(-50%, -50%);
   pointer-events: auto;
 }
+/* A city's Disposition (set on the City entry itself) recolors its pin --
+   Friendly glows the same blue as the Wizard party theme, Hostile the same
+   red as the Barbarian theme, and Neutral/unset just keeps the default gold
+   .cat-city color inherited from the .map-pins wrapper. */
+.map-pin.pin-friendly { --cat-color: #3b82f6; --cat-light: #bfdbfe; --cat-glow: rgba(59, 130, 246, 0.45); }
+.map-pin.pin-hostile { --cat-color: #dc2626; --cat-light: #fecaca; --cat-glow: rgba(220, 38, 38, 0.45); }
 .map-pin-dot {
   display: block;
   width: 18px;
@@ -752,6 +844,46 @@ code {
   cursor: pointer;
 }
 .map-pin-dot:hover { filter: brightness(1.15); }
+/* Character pins mark a notable person rather than a settlement, so they're
+   deliberately smaller than a City dot and carry a free-picked symbol
+   (a letter or emoji, whatever the person placing it typed) on a
+   free-picked background color (from the pin form's color wheel) --
+   both set inline per-pin via the --cat-color/--cat-light/--cat-glow
+   custom properties, the same cascade City disposition colors use, just
+   with an arbitrary color instead of one of three fixed ones. */
+.map-pin-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--cat-color);
+  border: 2px solid var(--parchment);
+  box-shadow: 0 0 8px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--parchment);
+  text-decoration: none;
+  overflow: hidden;
+}
+.map-pin-symbol:hover { filter: brightness(1.15); }
+/* Organization pins reuse the City dot's Disposition-driven color classes
+   (.pin-friendly/.pin-hostile), but a rotated square reads as a distinct
+   "banner/marker" shape at a glance, so a guild's headquarters is never
+   mistaken for a City or a Character pin on a busy map. */
+.map-pin-flag {
+  display: block;
+  width: 13px;
+  height: 13px;
+  background: var(--cat-color);
+  border: 2px solid var(--parchment);
+  box-shadow: 0 0 10px 2px var(--cat-glow), 0 0 0 2px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transform: rotate(45deg);
+}
+.map-pin-flag:hover { filter: brightness(1.15); }
 .map-pin-dot-ghost {
   background: transparent;
   border: 2px dashed var(--cat-color);
@@ -800,6 +932,53 @@ code {
 }
 .map-pin-delete-btn:hover { color: var(--danger-hover); }
 
+/* Fog of war: an undiscovered pin is only ever rendered at all when DM Mode
+   is on (the player-facing map excludes them outright, see map_view()), so
+   this dimmed/dashed treatment exists purely to let the DM tell at a glance,
+   among the pins they *can* see, which ones the party hasn't found yet. */
+.map-pin-undiscovered .map-pin-dot,
+.map-pin-undiscovered .map-pin-symbol,
+.map-pin-undiscovered .map-pin-flag {
+  opacity: 0.45;
+  border-style: dashed;
+  filter: grayscale(0.3);
+}
+.map-pin-hidden-tag {
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 0.3rem;
+}
+.map-pin-discovered-form { margin-top: 0.3rem; }
+.map-pin-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.map-pin-toggle-btn:hover { color: var(--accent-bright); }
+
+.dm-mode-form { display: contents; }
+.btn-dm-active {
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  color: #12171c;
+  font-weight: bold;
+  border-color: var(--accent);
+}
+.dm-mode-banner {
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
 .map-pin-form {
   display: flex;
   align-items: flex-end;
@@ -818,7 +997,8 @@ code {
   font-weight: bold;
   font-family: var(--font-heading);
 }
-.map-pin-form select {
+.map-pin-form select,
+.map-pin-form input[type="text"] {
   font-family: var(--font-body);
   font-size: 1rem;
   padding: 0.5rem 0.7rem;
@@ -826,6 +1006,15 @@ code {
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text);
+}
+.map-pin-form input[type="color"] {
+  width: 3rem;
+  height: 2.5rem;
+  padding: 0.15rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
 }
 
 .site-footer {
@@ -836,3 +1025,18 @@ code {
   font-family: var(--font-heading);
   letter-spacing: 0.02em;
 }
+
+/* Search page: Category + per-category filter dropdowns read best as a
+   compact horizontal filter bar rather than .entry-form's default stacked
+   layout (which suits a long entry-editing form, not a row of short
+   selects) -- same flex-row/wrap/align-to-baseline treatment as the map's
+   pin-placement forms. */
+.search-filters-form {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.85rem;
+  max-width: none;
+}
+.search-filters-form label { min-width: 160px; }
+.search-filters-form .form-actions { align-items: center; }

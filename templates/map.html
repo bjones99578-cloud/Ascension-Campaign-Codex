@@ -10,33 +10,98 @@
     <button type="button" class="btn" onclick="mapZoom(-20)">− Zoom Out</button>
     <button type="button" class="btn" onclick="mapZoom(0, true)">Reset</button>
     <button type="button" class="btn" onclick="mapZoom(20)">+ Zoom In</button>
-    <button type="button" class="btn" id="pinModeToggle">📍 Add City Pin</button>
+    {% if city_options %}
+      <button type="button" class="btn" id="pinModeToggle">📍 Add City Pin</button>
+    {% endif %}
+    {% if character_options %}
+      <button type="button" class="btn" id="charPinModeToggle">★ Add Character Pin</button>
+    {% endif %}
+    {% if organization_options %}
+      <button type="button" class="btn" id="orgPinModeToggle">🚩 Add Organization Pin</button>
+    {% endif %}
+    <form method="post" action="{{ url_for('dm_mode_toggle') }}" class="dm-mode-form">
+      <button type="submit" class="btn {{ 'btn-dm-active' if dm_mode else '' }}" title="DM Mode reveals every pin, including ones the party hasn't discovered yet.">
+        {{ '🕯️ DM Mode: ON' if dm_mode else '🕯️ DM Mode: Off' }}
+      </button>
+    </form>
   </div>
 
-  {% if not city_options %}
+  {% if dm_mode %}
+    <p class="empty-state dm-mode-banner">
+      DM Mode is on — undiscovered pins (dimmed, dashed outline) are visible to you here but hidden from the party's normal map view. Use "Mark Discovered" / "Mark Undiscovered" on a pin's tooltip to control that.
+    </p>
+  {% endif %}
+
+  {% if not city_options and not character_options and not organization_options %}
     <p class="empty-state">
-      Create a City entry first, then come back here to pin it on the map.
+      Create a City, Character, or Organization entry first, then come back here to pin it on the map.
     </p>
   {% else %}
     <p class="empty-state" id="pinModeHint" style="display:none;">
       Click anywhere on the map to drop a pin there, then choose which city it is.
     </p>
 
-    <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="pinForm" style="display:none;">
-      <input type="hidden" name="x" id="pinFormX">
-      <input type="hidden" name="y" id="pinFormY">
-      <label>
-        Which city is this?
-        <select name="entry_id" required>
-          <option value="">— Choose a city —</option>
-          {% for city in city_options %}
-            <option value="{{ city['id'] }}">{{ city['name'] }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <button type="submit" class="btn btn-primary">Place Pin</button>
-      <button type="button" class="btn" id="pinFormCancel">Cancel</button>
-    </form>
+    {% if city_options %}
+      <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="pinForm" style="display:none;">
+        <input type="hidden" name="x" id="pinFormX">
+        <input type="hidden" name="y" id="pinFormY">
+        <label>
+          Which city is this?
+          <select name="entry_id" required>
+            <option value="">— Choose a city —</option>
+            {% for city in city_options %}
+              <option value="{{ city['id'] }}">{{ city['name'] }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="btn btn-primary">Place Pin</button>
+        <button type="button" class="btn" id="pinFormCancel">Cancel</button>
+      </form>
+    {% endif %}
+
+    {% if character_options %}
+      <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="charPinForm" style="display:none;">
+        <input type="hidden" name="x" id="charPinFormX">
+        <input type="hidden" name="y" id="charPinFormY">
+        <label>
+          Which character is this?
+          <select name="entry_id" required>
+            <option value="">— Choose a character —</option>
+            {% for character in character_options %}
+              <option value="{{ character['id'] }}">{{ character['name'] }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Symbol <span class="hint">(a letter or emoji — makes this pin their own)</span>
+          <input type="text" name="symbol" maxlength="4" value="{{ default_pin_symbol }}" style="width: 4rem; text-align: center;">
+        </label>
+        <label>
+          Pin color
+          <input type="color" name="color" value="{{ default_pin_color }}">
+        </label>
+        <button type="submit" class="btn btn-primary">Place Pin</button>
+        <button type="button" class="btn" id="charPinFormCancel">Cancel</button>
+      </form>
+    {% endif %}
+
+    {% if organization_options %}
+      <form method="post" action="{{ url_for('map_pin_add') }}" class="map-pin-form" id="orgPinForm" style="display:none;">
+        <input type="hidden" name="x" id="orgPinFormX">
+        <input type="hidden" name="y" id="orgPinFormY">
+        <label>
+          Which organization is this?
+          <select name="entry_id" required>
+            <option value="">— Choose an organization —</option>
+            {% for org in organization_options %}
+              <option value="{{ org['id'] }}">{{ org['name'] }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <button type="submit" class="btn btn-primary">Place Pin</button>
+        <button type="button" class="btn" id="orgPinFormCancel">Cancel</button>
+      </form>
+    {% endif %}
   {% endif %}
 
   <div class="map-page-wrap" id="mapWrap">
@@ -44,19 +109,74 @@
       <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ map_filename) }}" alt="World map">
       <div class="map-pins cat-city" id="mapPins">
         {% for pin in pins %}
-          <div class="map-pin" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
-            <a class="map-pin-dot" href="{{ url_for('city_view', city_id=pin.entry_id) }}"
-               aria-label="Open {{ pin.city_name }} in City View"></a>
-            <div class="map-pin-tooltip">
-              <strong>{{ pin.city_name }}</strong>
-              {% if pin.region_name %}<span>{{ pin.region_name }}</span>{% endif %}
-              <span>{{ pin.settlement_size or 'Settlement size unknown' }}{% if pin.population %} · Pop. {{ pin.population }}{% endif %}</span>
-              <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
-                    onsubmit="return confirm('Remove this pin from the map? The {{ pin.city_name }} entry itself is kept.');">
-                <button type="submit" class="map-pin-delete-btn">Remove pin</button>
-              </form>
+          {% set undiscovered_class = "map-pin-undiscovered" if not pin.discovered else "" %}
+          {% if pin.entry_category == "Character" %}
+            {% set pin_color = pin.color or default_pin_color %}
+            <div class="map-pin map-pin-character {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%; --cat-color: {{ pin_color }}; --cat-light: {{ pin_color }}; --cat-glow: {{ pin_color }}66;">
+              <a class="map-pin-symbol" href="{{ url_for('entry_detail', entry_id=pin.entry_id) }}"
+                 aria-label="Open {{ pin.entry_name }}">{{ pin.symbol or default_pin_symbol }}</a>
+              <div class="map-pin-tooltip">
+                <strong>{{ pin.entry_name }}</strong>
+                <span>Last Known Status: {{ pin.character_status or 'Unknown' }}</span>
+                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
+                {% if dm_mode %}
+                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
+                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
+                      onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
+                  <button type="submit" class="map-pin-delete-btn">Remove pin</button>
+                </form>
+              </div>
             </div>
-          </div>
+          {% elif pin.entry_category == "Organization" %}
+            {% set pin_disposition_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "") %}
+            <div class="map-pin {{ pin_disposition_class }} {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
+              <a class="map-pin-flag" href="{{ url_for('entry_detail', entry_id=pin.entry_id) }}"
+                 aria-label="Open {{ pin.entry_name }}"></a>
+              <div class="map-pin-tooltip">
+                <strong>{{ pin.entry_name }}</strong>
+                <span>{% if pin.leader_name %}Led by {{ pin.leader_name }}{% else %}No known leader{% endif %}</span>
+                <span>{{ pin.org_type or 'Organization type unknown' }}</span>
+                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
+                {% if dm_mode %}
+                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
+                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
+                      onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
+                  <button type="submit" class="map-pin-delete-btn">Remove pin</button>
+                </form>
+              </div>
+            </div>
+          {% else %}
+            {% set pin_disposition_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "") %}
+            <div class="map-pin {{ pin_disposition_class }} {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
+              <a class="map-pin-dot" href="{{ url_for('city_view', city_id=pin.entry_id) }}"
+                 aria-label="Open {{ pin.entry_name }} in City View"></a>
+              <div class="map-pin-tooltip">
+                <strong>{{ pin.entry_name }}</strong>
+                <span>
+                  {% if pin.leader_name %}Led by {{ pin.leader_name }}
+                  {% elif pin.leading_org_name %}Ruled by {{ pin.leading_org_name }}
+                  {% else %}No known leader{% endif %}
+                </span>
+                <span>{{ pin.settlement_size or 'Settlement size unknown' }}</span>
+                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
+                {% if dm_mode %}
+                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
+                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
+                      onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
+                  <button type="submit" class="map-pin-delete-btn">Remove pin</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
         {% endfor %}
         <div class="map-pin map-pin-ghost" id="mapPinGhost" style="display:none;">
           <span class="map-pin-dot map-pin-dot-ghost"></span>
@@ -95,58 +215,105 @@
   })();
 
   (function () {
-    var toggleBtn = document.getElementById('pinModeToggle');
     var img = document.getElementById('mapImage');
     var mapInner = document.getElementById('mapInner');
     var hint = document.getElementById('pinModeHint');
-    var form = document.getElementById('pinForm');
-    var cancelBtn = document.getElementById('pinFormCancel');
     var ghost = document.getElementById('mapPinGhost');
-    var xField = document.getElementById('pinFormX');
-    var yField = document.getElementById('pinFormY');
-    if (!toggleBtn || !img || !mapInner) return;
+    if (!img || !mapInner) return;
+
+    // Every pin-placement mode (City, Character, Organization, and any more
+    // added later) shares one click-to-place flow: whichever toggle was
+    // clicked last decides which form appears (and which entry list gets
+    // offered) once you click a spot on the map. Driven by this list instead
+    // of one hardcoded variable pair per mode, so adding a new pin type
+    // later is just one more entry here.
+    var modes = [
+      {
+        type: 'city',
+        toggle: document.getElementById('pinModeToggle'),
+        form: document.getElementById('pinForm'),
+        cancelBtn: document.getElementById('pinFormCancel'),
+        xField: document.getElementById('pinFormX'),
+        yField: document.getElementById('pinFormY'),
+        toggleLabel: '📍 Add City Pin',
+        hintText: 'Click anywhere on the map to drop a pin there, then choose which city it is.'
+      },
+      {
+        type: 'character',
+        toggle: document.getElementById('charPinModeToggle'),
+        form: document.getElementById('charPinForm'),
+        cancelBtn: document.getElementById('charPinFormCancel'),
+        xField: document.getElementById('charPinFormX'),
+        yField: document.getElementById('charPinFormY'),
+        toggleLabel: '★ Add Character Pin',
+        hintText: 'Click anywhere on the map to drop a pin there, then choose which character it is.'
+      },
+      {
+        type: 'organization',
+        toggle: document.getElementById('orgPinModeToggle'),
+        form: document.getElementById('orgPinForm'),
+        cancelBtn: document.getElementById('orgPinFormCancel'),
+        xField: document.getElementById('orgPinFormX'),
+        yField: document.getElementById('orgPinFormY'),
+        toggleLabel: '🚩 Add Organization Pin',
+        hintText: 'Click anywhere on the map to drop a pin there, then choose which organization it is.'
+      }
+    ];
 
     var placing = false;
+    var placingType = null;
 
-    function setPlacing(next) {
-      placing = next;
-      mapInner.classList.toggle('pin-placing', placing);
-      if (hint) hint.style.display = placing ? '' : 'none';
-      toggleBtn.textContent = placing ? 'Cancel Adding Pin' : '📍 Add City Pin';
-      if (!placing) {
-        if (form) form.style.display = 'none';
-        if (ghost) ghost.style.display = 'none';
+    function setPlacing(type) {
+      if (placing && placingType === type) {
+        placing = false;
+        placingType = null;
+      } else {
+        placing = true;
+        placingType = type;
       }
-    }
-
-    toggleBtn.addEventListener('click', function () {
-      setPlacing(!placing);
-    });
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', function () {
-        setPlacing(false);
+      mapInner.classList.toggle('pin-placing', placing);
+      var activeMode = null;
+      modes.forEach(function (mode) {
+        var isActive = placing && placingType === mode.type;
+        if (isActive) activeMode = mode;
+        if (mode.toggle) mode.toggle.textContent = isActive ? 'Cancel Adding Pin' : mode.toggleLabel;
+        // Forms only appear once you actually click a spot on the map
+        // (handled below) -- entering placing mode (or switching between
+        // modes) just resets every form back out of view until the next click.
+        if (mode.form) mode.form.style.display = 'none';
       });
+      if (hint) {
+        hint.style.display = placing ? '' : 'none';
+        if (activeMode) hint.textContent = activeMode.hintText;
+      }
+      if (ghost) ghost.style.display = 'none';
     }
+
+    modes.forEach(function (mode) {
+      if (mode.toggle) mode.toggle.addEventListener('click', function () { setPlacing(mode.type); });
+      if (mode.cancelBtn) mode.cancelBtn.addEventListener('click', function () { setPlacing(mode.type); });
+    });
 
     mapInner.addEventListener('click', function (e) {
       if (!placing) return;
       if (e.target.closest('.map-pin') && !e.target.closest('.map-pin-ghost')) return; // don't re-place on top of an existing pin
+      var activeMode = modes.filter(function (m) { return m.type === placingType; })[0];
+      if (!activeMode) return;
       var rect = img.getBoundingClientRect();
       var xPct = ((e.clientX - rect.left) / rect.width) * 100;
       var yPct = ((e.clientY - rect.top) / rect.height) * 100;
       xPct = Math.max(0, Math.min(100, xPct));
       yPct = Math.max(0, Math.min(100, yPct));
-      if (xField) xField.value = xPct.toFixed(2);
-      if (yField) yField.value = yPct.toFixed(2);
+      if (activeMode.xField) activeMode.xField.value = xPct.toFixed(2);
+      if (activeMode.yField) activeMode.yField.value = yPct.toFixed(2);
       if (ghost) {
         ghost.style.left = xPct + '%';
         ghost.style.top = yPct + '%';
         ghost.style.display = '';
       }
-      if (form) {
-        form.style.display = '';
-        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      if (activeMode.form) {
+        activeMode.form.style.display = '';
+        activeMode.form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     });
   })();

@@ -3,7 +3,7 @@
 {% block content %}
 <section class="hero">
   <h1>The Ascension Campaign Codex</h1>
-  <p>Track cities, characters, organizations, locations, items, and quests as your world grows. Anyone in the party can add or edit an entry.</p>
+  <p>Track cities, characters, organizations, locations, items, quests, and session logs as your world grows. Anyone in the party can add or edit an entry.</p>
 </section>
 
 {% if map_filename %}
@@ -40,7 +40,7 @@
           {% endif %}
           <div>
             <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>
-            <span class="tag">{{ entry['category'] }}</span>
+            <span class="tag">{{ category_labels.get(entry['category'], entry['category']) }}</span>
             {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
           </div>
         </li>

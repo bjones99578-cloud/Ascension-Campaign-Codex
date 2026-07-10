@@ -31,7 +31,7 @@
     Category
     <select name="category" id="category-select">
       {% for cat in categories %}
-        <option value="{{ cat }}" {% if cat == form.category %}selected{% endif %}>{{ cat }}</option>
+        <option value="{{ cat }}" {% if cat == form.category %}selected{% endif %}>{{ category_labels.get(cat, cat) }}</option>
       {% endfor %}
     </select>
   </label>
@@ -69,6 +69,8 @@
                    value="{{ form.get(f.name) if form.get(f.name) is not none else '' }}"
                    {% if f.min is defined %}min="{{ f.min }}"{% endif %}
                    {% if f.max is defined %}max="{{ f.max }}"{% endif %}>
+          {% elif f.type == "date" %}
+            <input type="date" name="{{ f.name }}" value="{{ form.get(f.name) or '' }}">
           {% else %}
             <input type="text" name="{{ f.name }}" value="{{ form.get(f.name) or '' }}">
           {% endif %}
@@ -117,6 +119,24 @@
         {% endfor %}
       </select>
     </label>
+    <label>
+      Leader <span class="hint">(optional — the Character who rules this city, if any)</span>
+      <select name="leader">
+        <option value="">— None —</option>
+        {% for character in character_options %}
+          <option value="{{ character['id'] }}" {% if form.leader_id == character['id'] %}selected{% endif %}>{{ character['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Leading Organization <span class="hint">(optional — the group that governs this city, if not a single ruler)</span>
+      <select name="leading_organization">
+        <option value="">— None —</option>
+        {% for org in organization_options %}
+          <option value="{{ org['id'] }}" {% if form.leading_organization_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
   </div>
 
   <div class="field-group" data-show-for="Organization">
@@ -135,6 +155,30 @@
         <option value="">— None —</option>
         {% for character in character_options %}
           <option value="{{ character['id'] }}" {% if form.leader_id == character['id'] %}selected{% endif %}>{{ character['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="field-group" data-show-for="Item">
+    <label>
+      Current Holder <span class="hint">(optional — which Character has this item right now)</span>
+      <select name="current_holder">
+        <option value="">— None —</option>
+        {% for character in character_options %}
+          <option value="{{ character['id'] }}" {% if form.current_holder_id == character['id'] %}selected{% endif %}>{{ character['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="field-group" data-show-for="Location">
+    <label>
+      Controlling Organization <span class="hint">(optional — the faction that owns or controls this place, if any)</span>
+      <select name="controlling_org">
+        <option value="">— None —</option>
+        {% for org in organization_options %}
+          <option value="{{ org['id'] }}" {% if form.controlling_org_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
         {% endfor %}
       </select>
     </label>
