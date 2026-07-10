@@ -26,14 +26,20 @@
   <nav class="category-nav">
     <a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">Map</a>
     <a href="{{ url_for('city_view') }}" class="{% if request.path == url_for('city_view') %}active{% endif %}">City View</a>
+    <a href="{{ url_for('party_roster') }}" class="cat-character {% if request.path == url_for('party_roster') %}active{% endif %}">
+      <img class="cat-icon" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
+      Party Roster
+    </a>
     {% for cat in categories %}
-      <a href="{{ url_for('category_view', category=cat) }}" class="{% if request.path == url_for('category_view', category=cat) %}active{% endif %}">
+      <a href="{{ url_for('category_view', category=cat) }}"
+         class="cat-{{ cat.lower() }} {% if request.path == url_for('category_view', category=cat) %}active{% endif %}">
+        <img class="cat-icon" src="{{ url_for('static', filename='icons/' ~ cat.lower() ~ '.svg') }}" alt="">
         {{ category_plurals.get(cat, cat + 's') }} <span class="count">{{ category_counts.get(cat, 0) }}</span>
       </a>
     {% endfor %}
   </nav>
 </header>
-<main class="content">
+<main class="content {% block body_class %}{% endblock %}">
   {% block content %}{% endblock %}
 </main>
 <footer class="site-footer">

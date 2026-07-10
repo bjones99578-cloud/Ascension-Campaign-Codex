@@ -19,7 +19,8 @@
 
 <section class="category-grid">
   {% for cat in categories %}
-    <a class="category-card" href="{{ url_for('category_view', category=cat) }}">
+    <a class="category-card cat-{{ cat.lower() }}" href="{{ url_for('category_view', category=cat) }}">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ cat.lower() ~ '.svg') }}" alt="">
       <h2>{{ category_plurals.get(cat, cat + 's') }}</h2>
       <span class="category-card-count">{{ category_counts.get(cat, 0) }}</span>
     </a>
@@ -33,7 +34,7 @@
   {% if recent %}
     <ul class="entry-list">
       {% for entry in recent %}
-        <li>
+        <li class="cat-{{ entry['category'].lower() }}">
           {% if entry['image_filename'] %}
             <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
           {% endif %}

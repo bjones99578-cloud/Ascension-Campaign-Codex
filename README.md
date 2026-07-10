@@ -60,6 +60,23 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   of every Character (with Class/Level/Status) and Organization (with
   Type/Leader/Status/Alignment) connected to it, all on one screen instead of
   clicking through separate entry pages as the party travels around.
+- **A theme per category**: each of the seven categories has its own custom
+  icon and arcane glow color — emerald for Regions, gold for Cities, violet
+  for Characters, rose for Organizations, cyan for Locations, copper for
+  Items, and indigo for Quests — carried through the nav, category badges,
+  category pages, and entry pages, so each type of entry has its own
+  distinct, glowing fantasy feel.
+- **Party Roster**: the "Party Roster" link in the nav is a fixed 5-slot
+  page for your actual player characters. Mark any Character entry as a
+  **Party Member** (a field right on the Character form) and fill in their
+  **Player Name**, **Subclass**, **Key Item**, and **Current City** (handy
+  for tracking where everyone is as the party travels), then seat them in an
+  open slot — either "+ Create New Character" straight into that slot, or
+  assign an existing party member who isn't seated yet. Each occupied slot
+  is themed by the character's **Class**: a Ranger's card glows woodland
+  green, a Wizard's glows arcane blue, a Paladin's glows radiant gold, and so
+  on for all twelve core classes. "Remove from Roster" just frees the slot —
+  it never deletes the character entry itself.
 - **Wiki links**: in any entry's content, type `[[Entry Name]]` to link to
   another entry, or `[[Entry Name|custom display text]]`. If the target
   doesn't exist yet, the link shows up dashed/orange — click it to create

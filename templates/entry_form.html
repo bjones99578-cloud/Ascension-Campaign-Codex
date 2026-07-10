@@ -19,6 +19,9 @@
   {% if form.image_filename %}
     <input type="hidden" name="existing_image_filename" value="{{ form.image_filename }}">
   {% endif %}
+  {% if form.get('pc_slot') %}
+    <input type="hidden" name="pc_slot" value="{{ form.pc_slot }}">
+  {% endif %}
   <label>
     Name
     <input type="text" name="name" value="{{ form.name }}" required autofocus>
@@ -74,6 +77,15 @@
         <option value="">— None —</option>
         {% for org in organization_options %}
           <option value="{{ org['id'] }}" {% if form.organization_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Current City <span class="hint">(where they are right now, if different from home — handy while the party travels)</span>
+      <select name="current_city">
+        <option value="">— None —</option>
+        {% for city in city_options %}
+          <option value="{{ city['id'] }}" {% if form.current_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
         {% endfor %}
       </select>
     </label>

@@ -22,7 +22,69 @@
   --font-display: "Cinzel Decorative", "Cinzel", Georgia, serif;
   --font-heading: "Cinzel", Georgia, serif;
   --font-body: "EB Garamond", "Iowan Old Style", Georgia, serif;
+
+  /* Default category theme = the site's own blue, used wherever no specific
+     category context applies (mixed listings, utility pages). */
+  --cat-color: var(--accent);
+  --cat-light: var(--accent-bright);
+  --cat-glow: rgba(91, 155, 213, 0.3);
 }
+
+/* ---------- per-category arcane themes ---------- */
+/* Each category gets its own color + glow. Apply the matching class to a
+   page section (or a single row/tag) and every themed element inside it —
+   dividers, headings, tags, portraits, drop-caps — re-tints automatically
+   through the --cat-* custom properties above. */
+.cat-region       { --cat-color: #34d399; --cat-light: #a7f3d0; --cat-glow: rgba(52, 211, 153, 0.35); }
+.cat-city         { --cat-color: #f4b942; --cat-light: #fde68a; --cat-glow: rgba(244, 185, 66, 0.35); }
+.cat-character    { --cat-color: #a78bfa; --cat-light: #ddd6fe; --cat-glow: rgba(167, 139, 250, 0.35); }
+.cat-organization { --cat-color: #fb7185; --cat-light: #fecdd3; --cat-glow: rgba(251, 113, 133, 0.35); }
+.cat-location     { --cat-color: #22d3ee; --cat-light: #a5f3fc; --cat-glow: rgba(34, 211, 238, 0.35); }
+.cat-item         { --cat-color: #fb923c; --cat-light: #fed7aa; --cat-glow: rgba(251, 146, 60, 0.35); }
+.cat-quest        { --cat-color: #818cf8; --cat-light: #e0e7ff; --cat-glow: rgba(129, 140, 248, 0.35); }
+
+/* ---------- per-class party themes (Player Character roster only) ---------- */
+/* Reuses the same --cat-* properties, so a class-<slug> wrapper re-tints the
+   same themed-banner/tag/portrait components used everywhere else — a
+   Ranger's roster card glows woodland green, a Wizard's glows arcane blue. */
+.class-barbarian { --cat-color: #dc2626; --cat-light: #fecaca; --cat-glow: rgba(220, 38, 38, 0.35); }
+.class-bard       { --cat-color: #ec4899; --cat-light: #fbcfe8; --cat-glow: rgba(236, 72, 153, 0.35); }
+.class-cleric     { --cat-color: #fbbf24; --cat-light: #fef9c3; --cat-glow: rgba(251, 191, 36, 0.35); }
+.class-druid      { --cat-color: #65a30d; --cat-light: #d9f99d; --cat-glow: rgba(101, 163, 10, 0.35); }
+.class-fighter    { --cat-color: #64748b; --cat-light: #e2e8f0; --cat-glow: rgba(100, 116, 139, 0.35); }
+.class-monk       { --cat-color: #10b981; --cat-light: #a7f3d0; --cat-glow: rgba(16, 185, 129, 0.35); }
+.class-paladin    { --cat-color: #f59e0b; --cat-light: #fde68a; --cat-glow: rgba(245, 158, 11, 0.35); }
+.class-ranger     { --cat-color: #16a34a; --cat-light: #bbf7d0; --cat-glow: rgba(22, 163, 74, 0.35); }
+.class-rogue      { --cat-color: #6d28d9; --cat-light: #ddd6fe; --cat-glow: rgba(109, 40, 217, 0.35); }
+.class-sorcerer   { --cat-color: #d946ef; --cat-light: #f5d0fe; --cat-glow: rgba(217, 70, 239, 0.35); }
+.class-warlock    { --cat-color: #a21caf; --cat-light: #f0abfc; --cat-glow: rgba(162, 28, 175, 0.35); }
+.class-wizard     { --cat-color: #3b82f6; --cat-light: #bfdbfe; --cat-glow: rgba(59, 130, 246, 0.35); }
+
+.cat-icon { width: 1.1em; height: 1.1em; vertical-align: -0.2em; margin-right: 0.4em; filter: drop-shadow(0 0 3px var(--cat-glow)); }
+.cat-icon-lg { width: 52px; height: 52px; flex-shrink: 0; filter: drop-shadow(0 0 10px var(--cat-glow)); }
+
+/* A starry, glowing banner used to frame a themed page's header. */
+.themed-banner {
+  position: relative;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--cat-color);
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(circle at 15% 25%, var(--cat-glow), transparent 55%),
+    radial-gradient(circle at 88% 78%, var(--cat-glow), transparent 50%),
+    radial-gradient(1.6px 1.6px at 12% 28%, var(--cat-light) 60%, transparent 61%),
+    radial-gradient(1.4px 1.4px at 82% 20%, var(--cat-light) 60%, transparent 61%),
+    radial-gradient(1.8px 1.8px at 60% 78%, var(--cat-light) 60%, transparent 61%),
+    radial-gradient(1.3px 1.3px at 92% 55%, var(--cat-light) 60%, transparent 61%),
+    radial-gradient(1.5px 1.5px at 32% 85%, var(--cat-light) 60%, transparent 61%),
+    radial-gradient(1.3px 1.3px at 45% 15%, var(--cat-light) 60%, transparent 61%);
+  box-shadow: 0 0 30px var(--cat-glow), inset 0 0 40px rgba(0, 0, 0, 0.25);
+}
+.themed-banner .page-header { margin-bottom: 0; }
+.themed-banner h1 { text-shadow: 0 0 18px var(--cat-glow); }
+.themed-header-title { display: flex; align-items: center; gap: 0.15rem; flex-wrap: wrap; }
 
 * { box-sizing: border-box; }
 
@@ -79,7 +141,7 @@ code {
   align-items: center;
   gap: 0.75rem;
   margin: 2rem 0;
-  color: var(--accent);
+  color: var(--cat-color);
 }
 .divider::before, .divider::after {
   content: "";
@@ -89,7 +151,8 @@ code {
 }
 .divider-mark {
   width: 10px; height: 10px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--cat-color);
+  box-shadow: 0 0 6px var(--cat-glow);
   transform: rotate(45deg);
   flex-shrink: 0;
 }
@@ -187,7 +250,7 @@ code {
   font-size: 0.92rem;
   letter-spacing: 0.03em;
 }
-.category-nav a.active, .category-nav a:hover { color: var(--accent-bright); }
+.category-nav a.active, .category-nav a:hover { color: var(--cat-color); }
 .category-nav .count {
   background: var(--bg-card);
   border: 1px solid var(--border-soft);
@@ -233,7 +296,8 @@ code {
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .category-card:hover {
-  border-color: var(--accent);
+  border-color: var(--cat-color);
+  box-shadow: 0 0 22px var(--cat-glow);
   text-decoration: none;
   transform: translateY(-3px);
 }
@@ -245,8 +309,9 @@ code {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.category-card .cat-icon-lg { display: block; margin: 0 auto 0.7rem; }
 .category-card-count {
-  color: var(--accent-bright);
+  color: var(--cat-color);
   font-family: var(--font-display);
   font-size: 1.8rem;
 }
@@ -259,7 +324,7 @@ code {
   margin-bottom: 1.75rem;
   flex-wrap: wrap;
 }
-.page-header h1 { margin: 0.2rem 0; font-family: var(--font-display); color: var(--accent-bright); }
+.page-header h1 { margin: 0.2rem 0; font-family: var(--font-display); color: var(--cat-light); }
 
 .entry-list { list-style: none; padding: 0; margin: 0; }
 .entry-list li {
@@ -274,22 +339,24 @@ code {
   align-items: flex-start;
 }
 .entry-list.compact li { padding: 0.5rem 0.9rem; margin-bottom: 0.4rem; }
-.entry-list li a { font-size: 1.1rem; font-weight: bold; font-family: var(--font-heading); }
+.entry-list li a { font-size: 1.1rem; font-weight: bold; font-family: var(--font-heading); color: var(--cat-color); }
 .entry-list .summary { margin: 0.3rem 0 0; color: var(--text-muted); }
 .entry-thumb {
   width: 48px;
   height: 48px;
   object-fit: cover;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--cat-color);
+  box-shadow: 0 0 8px var(--cat-glow);
   flex-shrink: 0;
 }
 
 .tag {
   display: inline-block;
   background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  color: var(--accent);
+  border: 1px solid var(--cat-color);
+  color: var(--cat-color);
+  box-shadow: 0 0 6px var(--cat-glow);
   font-family: var(--font-heading);
   font-size: 0.72rem;
   padding: 0.1rem 0.55rem;
@@ -327,7 +394,8 @@ code {
   width: 100%;
   max-width: 320px;
   border-radius: var(--radius);
-  border: 2px solid var(--border);
+  border: 2px solid var(--cat-color);
+  box-shadow: 0 0 20px var(--cat-glow);
   margin-bottom: 1.5rem;
   display: block;
 }
@@ -352,7 +420,7 @@ code {
   float: left;
   line-height: 0.8;
   padding: 0.08em 0.12em 0 0;
-  color: var(--accent);
+  color: var(--cat-color);
 }
 .entry-body table { border-collapse: collapse; width: 100%; }
 .entry-body th, .entry-body td { border: 1px solid var(--ink-muted); padding: 0.4rem 0.6rem; }
@@ -378,7 +446,7 @@ code {
 .related-block { margin-bottom: 2rem; }
 .related-block h2 {
   font-size: 0.95rem;
-  color: var(--accent-bright);
+  color: var(--cat-light);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-family: var(--font-heading);
@@ -491,6 +559,107 @@ code {
 @media (max-width: 800px) {
   .watchboard-columns { grid-template-columns: 1fr; }
 }
+
+/* ---------- party roster ---------- */
+
+.party-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.roster-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1.5rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--cat-color);
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(circle at 20% 15%, var(--cat-glow), transparent 55%),
+    radial-gradient(circle at 85% 85%, var(--cat-glow), transparent 55%);
+  box-shadow: 0 0 24px var(--cat-glow), inset 0 0 30px rgba(0, 0, 0, 0.2);
+}
+
+.roster-slot-num {
+  align-self: flex-start;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat-color);
+  margin-bottom: 0.5rem;
+}
+
+.roster-portrait {
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid var(--cat-color);
+  box-shadow: 0 0 18px var(--cat-glow);
+  margin-bottom: 1rem;
+}
+.roster-portrait-placeholder { object-fit: contain; padding: 24px; background: var(--bg-card); }
+
+.roster-name { margin: 0 0 0.15rem; font-family: var(--font-display); font-size: 1.15rem; text-shadow: 0 0 12px var(--cat-glow); }
+.roster-name a { color: var(--cat-light); }
+.roster-player { margin: 0 0 0.6rem; color: var(--text-muted); font-family: var(--font-heading); font-size: 0.85rem; }
+.roster-build { margin: 0 0 0.9rem; font-family: var(--font-heading); }
+.roster-subclass { color: var(--text-muted); }
+
+.roster-facts {
+  width: 100%;
+  margin: 0 0 1.1rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+.roster-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border-soft);
+}
+.roster-facts dt { color: var(--text-muted); font-family: var(--font-heading); margin: 0; }
+.roster-facts dd { margin: 0; text-align: right; }
+
+.roster-actions { display: flex; gap: 0.6rem; margin-top: auto; }
+
+.roster-slot-empty { justify-content: center; border-style: dashed; }
+.roster-empty-hint { margin: 0 0 1.25rem; }
+.roster-new-btn { margin-bottom: 1rem; }
+.roster-assign-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: stretch;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-soft);
+}
+.roster-assign-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+.roster-assign-form select {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
 .form-error {
   background: rgba(168,67,58,0.15);
   border: 1px solid var(--danger);

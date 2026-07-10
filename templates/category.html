@@ -1,9 +1,15 @@
 {% extends "base.html" %}
 {% block title %}{{ category_plurals.get(category, category + 's') }} — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-{{ category.lower() }}{% endblock %}
 {% block content %}
-<div class="page-header">
-  <h1>{{ category_plurals.get(category, category + 's') }}</h1>
-  <a class="new-entry-btn" href="{{ url_for('new_entry', category=category) }}">+ New {{ category }}</a>
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ category.lower() ~ '.svg') }}" alt="">
+      <h1>{{ category_plurals.get(category, category + 's') }}</h1>
+    </div>
+    <a class="new-entry-btn" href="{{ url_for('new_entry', category=category) }}">+ New {{ category }}</a>
+  </div>
 </div>
 
 {% if entries %}

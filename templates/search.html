@@ -5,7 +5,7 @@
 {% if results %}
   <ul class="entry-list">
     {% for entry in results %}
-      <li>
+      <li class="cat-{{ entry['category'].lower() }}">
         {% if entry['image_filename'] %}
           <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
         {% endif %}

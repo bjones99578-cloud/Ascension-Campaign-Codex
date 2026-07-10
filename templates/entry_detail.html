@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ entry['name'] }} — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-{{ entry['category'].lower() }}{% endblock %}
 
 {% macro related_table(title, items, empty_hint) %}
   <div class="related-block">
@@ -26,18 +27,23 @@
 
 {% block content %}
 <article class="entry-detail">
-  <div class="page-header">
-    <div>
-      <span class="tag">{{ entry['category'] }}</span>
-      <h1>{{ entry['name'] }}</h1>
-      {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
-    </div>
-    <div class="entry-actions">
-      <a class="btn" href="{{ url_for('edit_entry', entry_id=entry['id']) }}">Edit</a>
-      <form action="{{ url_for('delete_entry_route', entry_id=entry['id']) }}" method="post"
-            onsubmit="return confirm('Delete this entry? This cannot be undone.');">
-        <button type="submit" class="btn btn-danger">Delete</button>
-      </form>
+  <div class="themed-banner">
+    <div class="page-header">
+      <div>
+        <div class="themed-header-title">
+          <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/' ~ entry['category'].lower() ~ '.svg') }}" alt="">
+          <h1>{{ entry['name'] }}</h1>
+        </div>
+        <span class="tag cat-{{ entry['category'].lower() }}">{{ entry['category'] }}</span>
+        {% if entry['summary'] %}<p class="summary">{{ entry['summary'] }}</p>{% endif %}
+      </div>
+      <div class="entry-actions">
+        <a class="btn" href="{{ url_for('edit_entry', entry_id=entry['id']) }}">Edit</a>
+        <form action="{{ url_for('delete_entry_route', entry_id=entry['id']) }}" method="post"
+              onsubmit="return confirm('Delete this entry? This cannot be undone.');">
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -65,6 +71,9 @@
       {% endif %}
       {% if related_entities.organization %}
         <span><span class="relation-label">Organization:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.organization['id']) }}">{{ related_entities.organization['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.current_city %}
+        <span><span class="relation-label">Currently in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.current_city['id']) }}">{{ related_entities.current_city['name'] }}</a></span>
       {% endif %}
       {% if related_entities.region %}
         <span><span class="relation-label">Region:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.region['id']) }}">{{ related_entities.region['name'] }}</a></span>
@@ -111,7 +120,7 @@
       {% if backlinks %}
         <ul class="entry-list compact">
           {% for b in backlinks %}
-            <li><a href="{{ url_for('entry_detail', entry_id=b['id']) }}">{{ b['name'] }}</a> <span class="tag">{{ b['category'] }}</span></li>
+            <li class="cat-{{ b['category'].lower() }}"><a href="{{ url_for('entry_detail', entry_id=b['id']) }}">{{ b['name'] }}</a> <span class="tag cat-{{ b['category'].lower() }}">{{ b['category'] }}</span></li>
           {% endfor %}
         </ul>
       {% else %}

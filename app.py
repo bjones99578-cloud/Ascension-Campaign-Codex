@@ -34,6 +34,28 @@ def _parse_relationship_id(value):
     return int(value) if value else None
 
 
+def _parse_pc_slot(conn, form, ignore_entry_id=None):
+    """Read the hidden pc_slot field carried through the entry form. Returns
+    None if unset/blank, or if the requested slot is already occupied by a
+    different Character (defensive against stale links/back-button races) —
+    the entry still saves normally, it just doesn't land in the roster."""
+    raw = (form.get("pc_slot") or "").strip()
+    if not raw:
+        return None
+    try:
+        slot = int(raw)
+    except ValueError:
+        return None
+    if not (1 <= slot <= models.PARTY_SLOT_COUNT):
+        return None
+    holder = conn.execute(
+        "SELECT id FROM entry WHERE pc_slot = ?", (slot,)
+    ).fetchone()
+    if holder and holder["id"] != ignore_entry_id:
+        return None
+    return slot
+
+
 def parse_detail_fields(form):
     """Read the typical D&D detail fields (Species, Class, Alignment, Population,
     etc.) out of a submitted form, keyed by their DB column name. Numeric columns
@@ -154,6 +176,8 @@ def entry_detail(entry_id):
             related_entities["home_city"] = models.get_entry(conn, entry["home_city_id"])
         if entry["organization_id"]:
             related_entities["organization"] = models.get_entry(conn, entry["organization_id"])
+        if entry["current_city_id"]:
+            related_entities["current_city"] = models.get_entry(conn, entry["current_city_id"])
     elif entry["category"] == "City":
         if entry["region_id"]:
             related_entities["region"] = models.get_entry(conn, entry["region_id"])
@@ -191,6 +215,8 @@ def new_entry():
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         leader_id = _parse_relationship_id(request.form.get("leader"))
+        current_city_id = _parse_relationship_id(request.form.get("current_city"))
+        pc_slot = _parse_pc_slot(conn, request.form)
         details = parse_detail_fields(request.form)
         error = None
         if not name:
@@ -214,6 +240,8 @@ def new_entry():
                     "region_id": region_id,
                     "headquarters_city_id": headquarters_city_id,
                     "leader_id": leader_id,
+                    "current_city_id": current_city_id,
+                    "pc_slot": pc_slot,
                     **details,
                 },
                 **relationship_options(conn),
@@ -236,12 +264,17 @@ def new_entry():
             conn, name, category, summary, content, author, image_filename,
             home_city_id=home_city_id, organization_id=organization_id,
             region_id=region_id, headquarters_city_id=headquarters_city_id,
-            leader_id=leader_id, details=details,
+            leader_id=leader_id, current_city_id=current_city_id, pc_slot=pc_slot,
+            details=details,
         )
         return redirect(url_for("entry_detail", entry_id=entry_id))
 
     prefill_name = request.args.get("name", "")
     prefill_category = request.args.get("category", models.CATEGORIES[0])
+    prefill_slot = request.args.get("pc_slot", type=int)
+    prefill_details = models.empty_details()
+    if prefill_slot:
+        prefill_details["is_player_character"] = "Yes"
     return render_template(
         "entry_form.html",
         mode="new",
@@ -258,7 +291,9 @@ def new_entry():
             "region_id": None,
             "headquarters_city_id": None,
             "leader_id": None,
-            **models.empty_details(),
+            "current_city_id": None,
+            "pc_slot": prefill_slot,
+            **prefill_details,
         },
         **relationship_options(conn),
     )
@@ -298,6 +333,8 @@ def import_dndbeyond():
                         "region_id": None,
                         "headquarters_city_id": None,
                         "leader_id": None,
+                        "current_city_id": None,
+                        "pc_slot": None,
                         **models.empty_details(),
                     },
                     **relationship_options(get_conn()),
@@ -326,6 +363,8 @@ def edit_entry(entry_id):
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         leader_id = _parse_relationship_id(request.form.get("leader"))
+        current_city_id = _parse_relationship_id(request.form.get("current_city"))
+        pc_slot = _parse_pc_slot(conn, request.form, ignore_entry_id=entry_id)
         details = parse_detail_fields(request.form)
         error = None
         if not name:
@@ -352,6 +391,8 @@ def edit_entry(entry_id):
                     "region_id": region_id,
                     "headquarters_city_id": headquarters_city_id,
                     "leader_id": leader_id,
+                    "current_city_id": current_city_id,
+                    "pc_slot": pc_slot,
                     **details,
                 },
                 **relationship_options(conn),
@@ -366,7 +407,8 @@ def edit_entry(entry_id):
                 conn, entry_id, name, category, summary, content, author, new_image_filename,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
-                leader_id=leader_id, details=details,
+                leader_id=leader_id, current_city_id=current_city_id, pc_slot=pc_slot,
+                details=details,
             )
         elif remove_image and entry["image_filename"]:
             images.delete_upload(entry["image_filename"])
@@ -375,14 +417,16 @@ def edit_entry(entry_id):
                 conn, entry_id, name, category, summary, content, author,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
-                leader_id=leader_id, details=details,
+                leader_id=leader_id, current_city_id=current_city_id, pc_slot=pc_slot,
+                details=details,
             )
         else:
             models.update_entry(
                 conn, entry_id, name, category, summary, content, author,
                 home_city_id=home_city_id, organization_id=organization_id,
                 region_id=region_id, headquarters_city_id=headquarters_city_id,
-                leader_id=leader_id, details=details,
+                leader_id=leader_id, current_city_id=current_city_id, pc_slot=pc_slot,
+                details=details,
             )
 
         return redirect(url_for("entry_detail", entry_id=entry_id))
@@ -404,6 +448,8 @@ def edit_entry(entry_id):
             "region_id": entry["region_id"],
             "headquarters_city_id": entry["headquarters_city_id"],
             "leader_id": entry["leader_id"],
+            "current_city_id": entry["current_city_id"],
+            "pc_slot": entry["pc_slot"],
             **{col: entry[col] for col in models.DETAIL_COLUMNS},
         },
         **relationship_options(conn),
@@ -476,6 +522,61 @@ def city_view():
         organizations_display=organizations_display,
         rendered_summary=rendered_summary,
     )
+
+
+@app.route("/party")
+def party_roster():
+    """The Player Characters tab: a fixed 5-slot party roster, each slot
+    either showing its assigned Character (portrait, build, current/home
+    city, key item — themed by Class) or an empty-slot card offering to
+    create a new Character or assign an existing unassigned party member."""
+    conn = get_conn()
+    pcs = models.get_player_characters(conn)
+    by_slot = {pc["pc_slot"]: pc for pc in pcs if pc["pc_slot"]}
+    unassigned = [pc for pc in pcs if not pc["pc_slot"]]
+
+    slot_cards = []
+    for slot_num in range(1, models.PARTY_SLOT_COUNT + 1):
+        pc = by_slot.get(slot_num)
+        home_city = models.get_entry(conn, pc["home_city_id"]) if pc and pc["home_city_id"] else None
+        current_city = models.get_entry(conn, pc["current_city_id"]) if pc and pc["current_city_id"] else None
+        slot_cards.append({
+            "slot": slot_num,
+            "character": pc,
+            "home_city": home_city,
+            "current_city": current_city,
+            "theme_slug": models.CLASS_THEME_SLUGS.get(pc["char_class"]) if pc else None,
+        })
+
+    return render_template("party.html", slot_cards=slot_cards, unassigned=unassigned)
+
+
+@app.route("/party/assign", methods=["POST"])
+def party_assign():
+    conn = get_conn()
+    slot = request.form.get("slot", type=int)
+    character_id = request.form.get("character_id", type=int)
+    if slot and character_id and 1 <= slot <= models.PARTY_SLOT_COUNT:
+        holder = conn.execute("SELECT id FROM entry WHERE pc_slot = ?", (slot,)).fetchone()
+        character = models.get_entry(conn, character_id)
+        if (
+            not holder and character
+            and character["category"] == "Character"
+            and character["is_player_character"] == "Yes"
+        ):
+            conn.execute("UPDATE entry SET pc_slot = ? WHERE id = ?", (slot, character_id))
+            conn.commit()
+    return redirect(url_for("party_roster"))
+
+
+@app.route("/party/unassign", methods=["POST"])
+def party_unassign():
+    conn = get_conn()
+    character_id = request.form.get("character_id", type=int)
+    if character_id:
+        conn.execute("UPDATE entry SET pc_slot = NULL WHERE id = ?", (character_id,))
+        conn.commit()
+    return redirect(url_for("party_roster"))
 
 
 @app.route("/map")

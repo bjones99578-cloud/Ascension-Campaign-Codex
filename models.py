@@ -29,12 +29,20 @@ LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
 # Columns that hold an explicit, dropdown-selected relationship to another
 # entry (as opposed to relationships inferred from [[wiki links]] in prose).
 # Each is nullable and only meaningful for entries of a particular category:
-#   home_city_id, organization_id -> Character
+#   home_city_id, organization_id, current_city_id -> Character
 #   region_id                     -> City
 #   headquarters_city_id, leader_id -> Organization (leader_id points at a Character)
 RELATIONSHIP_COLUMNS = (
     "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+    "current_city_id",
 )
+
+# Party roster: a fixed 5-slot lineup of Player Characters, managed separately
+# from the general entry form (see the /party routes). pc_slot is 1-5 while a
+# Character occupies a roster slot, or NULL otherwise; it's not part of
+# RELATIONSHIP_COLUMNS/DETAIL_COLUMNS since it's only ever written by the
+# roster assign/unassign actions (or carried through unchanged on normal edits).
+PARTY_SLOT_COUNT = 5
 
 # ---------- typical D&D "detail" fields, per category ----------
 # These are plain-value fields (not relationships to other entries) that give
@@ -110,6 +118,28 @@ CHARACTER_STATUS_OPTIONS = ["Alive", "Dead", "Missing", "Retired"]
 
 ORG_STATUS_OPTIONS = ["Active", "Disbanded", "Dissolved", "Dormant"]
 
+PLAYER_CHARACTER_OPTIONS = ["Yes", "No"]
+
+# Fantasy color theme per Class, used only on the Player Character roster
+# page (/party) to give each party member's card its own mood — e.g. a
+# Ranger's card glows woodland green, a Wizard's glows arcane blue. Reuses
+# the same --cat-color/--cat-light/--cat-glow custom properties as the
+# per-category themes, via a "class-<slug>" CSS class.
+CLASS_THEME_SLUGS = {
+    "Barbarian": "barbarian",
+    "Bard": "bard",
+    "Cleric": "cleric",
+    "Druid": "druid",
+    "Fighter": "fighter",
+    "Monk": "monk",
+    "Paladin": "paladin",
+    "Ranger": "ranger",
+    "Rogue": "rogue",
+    "Sorcerer": "sorcerer",
+    "Warlock": "warlock",
+    "Wizard": "wizard",
+}
+
 # category -> ordered list of field descriptors shown on that category's form
 # and detail page. type is "select", "number", or "text".
 DETAIL_FIELDS = {
@@ -120,6 +150,10 @@ DETAIL_FIELDS = {
         {"name": "alignment", "label": "Alignment", "type": "select", "options": ALIGNMENT_OPTIONS},
         {"name": "background", "label": "Background", "type": "select", "options": BACKGROUND_OPTIONS},
         {"name": "character_status", "label": "Status", "type": "select", "options": CHARACTER_STATUS_OPTIONS},
+        {"name": "is_player_character", "label": "Party Member", "type": "select", "options": PLAYER_CHARACTER_OPTIONS},
+        {"name": "player_name", "label": "Player Name", "type": "text"},
+        {"name": "subclass", "label": "Subclass", "type": "text"},
+        {"name": "key_item", "label": "Key Item", "type": "text"},
     ],
     "City": [
         {"name": "settlement_size", "label": "Settlement Size", "type": "select", "options": SETTLEMENT_SIZE_OPTIONS},
@@ -192,6 +226,8 @@ def init_db():
             region_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             headquarters_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             leader_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            current_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            pc_slot INTEGER,
             {detail_column_defs},
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -221,11 +257,13 @@ def init_db():
     # plain nullable INTEGERs — that's fine, the app is the only thing writing
     # to them and only ever with either a valid entry id or NULL.
     existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(entry)")}
-    for col in ("image_filename",) + RELATIONSHIP_COLUMNS + tuple(DETAIL_COLUMNS):
+    for col in ("image_filename", "pc_slot") + RELATIONSHIP_COLUMNS + tuple(DETAIL_COLUMNS):
         if col in existing_cols:
             continue
         if col == "image_filename":
             conn.execute("ALTER TABLE entry ADD COLUMN image_filename TEXT")
+        elif col == "pc_slot":
+            conn.execute("ALTER TABLE entry ADD COLUMN pc_slot INTEGER")
         elif col in RELATIONSHIP_COLUMNS:
             conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER")
         elif col in DETAIL_INT_COLUMNS:
@@ -391,23 +429,36 @@ def get_cities_in_region(conn, region_id):
     ).fetchall()
 
 
+def get_player_characters(conn):
+    """All Characters flagged as party members, alphabetical — used for the
+    roster page's occupied-slot lookup and its "assign an existing character"
+    dropdown for empty slots."""
+    return conn.execute(
+        "SELECT * FROM entry WHERE category = 'Character' AND is_player_character = 'Yes' "
+        "ORDER BY name COLLATE NOCASE ASC"
+    ).fetchall()
+
+
 def create_entry(conn, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
-                  leader_id=None, details=None):
+                  leader_id=None, current_city_id=None, pc_slot=None, details=None):
     """details: dict mapping a DETAIL_COLUMNS column name to its value (or None) —
     the typical D&D fields (Species, Class, Alignment, etc.) relevant to whichever
     category this entry is. Columns not relevant to this category are simply
-    left NULL."""
+    left NULL. pc_slot (1-5, or None) is only meaningful for a Player Character
+    and is normally managed via the /party roster routes, not the entry form."""
     details = details or {}
     ts = now_iso()
     base_cols = [
         "name", "category", "summary", "content", "author", "image_filename",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+        "current_city_id", "pc_slot",
         "created_at", "updated_at",
     ]
     base_vals = [
         name.strip(), category, summary.strip(), content, author.strip(), image_filename,
-        home_city_id, organization_id, region_id, headquarters_city_id, leader_id, ts, ts,
+        home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
+        current_city_id, pc_slot, ts, ts,
     ]
     all_cols = base_cols + DETAIL_COLUMNS
     all_vals = base_vals + [details.get(col) for col in DETAIL_COLUMNS]
@@ -424,22 +475,26 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
 
 def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
-                  leader_id=None, details=None):
+                  leader_id=None, current_city_id=None, pc_slot=None, details=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
     leave whatever image is already set untouched (use clear_entry_image to remove it).
     The relationship ids (home_city_id, etc.) and the details dict (Species, Class,
     Alignment, etc.) are always set to whatever is passed in, including None to
     clear them — unlike image_filename there's no separate "leave unchanged" state,
-    since a <select>/<input> always resubmits its current value."""
+    since a <select>/<input> always resubmits its current value. pc_slot is likewise
+    always overwritten — callers that want to preserve an existing slot must pass it
+    back in explicitly (the entry form carries it through as a hidden field)."""
     details = details or {}
     ts = now_iso()
     set_cols = [
         "name", "category", "summary", "content", "author",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
+        "current_city_id", "pc_slot",
     ]
     set_vals = [
         name.strip(), category, summary.strip(), content, author.strip(),
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
+        current_city_id, pc_slot,
     ]
     if image_filename is not None:
         set_cols.append("image_filename")

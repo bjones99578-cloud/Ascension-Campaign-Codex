@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Party Roster — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-character{% endblock %}
+{% block content %}
+<div class="themed-banner">
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
+      <h1>Ascension Party Roster</h1>
+    </div>
+  </div>
+  <p class="summary">Five slots, five destinies. Each hero's card takes on the colors of their calling — a Ranger's card glows woodland green, a Wizard's arcane blue.</p>
+</div>
+
+<div class="party-grid">
+  {% for card in slot_cards %}
+    {% set theme_class = 'class-' ~ card.theme_slug if card.character and card.theme_slug else 'cat-character' %}
+    <div class="roster-slot {{ theme_class }} {% if not card.character %}roster-slot-empty{% endif %}">
+      {% if card.character %}
+        {% set c = card.character %}
+        <div class="roster-slot-num">Slot {{ card.slot }}</div>
+        {% if c['image_filename'] %}
+          <img class="roster-portrait" src="{{ url_for('static', filename='uploads/' ~ c['image_filename']) }}" alt="{{ c['name'] }}">
+        {% else %}
+          <img class="roster-portrait roster-portrait-placeholder" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
+        {% endif %}
+
+        <h2 class="roster-name"><a href="{{ url_for('entry_detail', entry_id=c['id']) }}">{{ c['name'] }}</a></h2>
+        {% if c['player_name'] %}<p class="roster-player">Played by {{ c['player_name'] }}</p>{% endif %}
+
+        <p class="roster-build">
+          {{ c['species'] or 'Unknown Species' }} {{ c['char_class'] or 'Unknown Class' }}{% if c['subclass'] %} <span class="roster-subclass">({{ c['subclass'] }})</span>{% endif %}
+          {% if c['level'] %}<span class="tag cat-character">Lvl {{ c['level'] }}</span>{% endif %}
+        </p>
+
+        <dl class="roster-facts">
+          {% if c['character_status'] %}
+            <div><dt>Status</dt><dd>{{ c['character_status'] }}</dd></div>
+          {% endif %}
+          {% if card.home_city %}
+            <div><dt>Home City</dt><dd><a href="{{ url_for('entry_detail', entry_id=card.home_city['id']) }}">{{ card.home_city['name'] }}</a></dd></div>
+          {% endif %}
+          {% if card.current_city %}
+            <div><dt>Currently In</dt><dd><a href="{{ url_for('entry_detail', entry_id=card.current_city['id']) }}">{{ card.current_city['name'] }}</a></dd></div>
+          {% endif %}
+          {% if c['key_item'] %}
+            <div><dt>Key Item</dt><dd>{{ c['key_item'] }}</dd></div>
+          {% endif %}
+        </dl>
+
+        <div class="roster-actions">
+          <a class="btn" href="{{ url_for('edit_entry', entry_id=c['id']) }}">Edit</a>
+          <form method="post" action="{{ url_for('party_unassign') }}" onsubmit="return confirm('Remove {{ c['name'] }} from the roster? This only frees the slot — the character entry itself is kept.');">
+            <input type="hidden" name="character_id" value="{{ c['id'] }}">
+            <button type="submit" class="btn btn-danger">Remove from Roster</button>
+          </form>
+        </div>
+      {% else %}
+        <div class="roster-slot-num">Slot {{ card.slot }}</div>
+        <p class="empty-state roster-empty-hint">This seat is open.</p>
+
+        <a class="btn btn-primary roster-new-btn" href="{{ url_for('new_entry', category='Character', pc_slot=card.slot) }}">+ Create New Character</a>
+
+        {% if unassigned %}
+          <form method="post" action="{{ url_for('party_assign') }}" class="roster-assign-form">
+            <input type="hidden" name="slot" value="{{ card.slot }}">
+            <label>
+              Or assign an existing party member
+              <select name="character_id">
+                {% for pc in unassigned %}
+                  <option value="{{ pc['id'] }}">{{ pc['name'] }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button type="submit" class="btn">Assign</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if not unassigned and slot_cards|selectattr('character')|list|length == 0 %}
+  <p class="empty-state">No party members yet — mark a Character as a Party Member (set "Party Member" to Yes on their entry) or create a new one above to seat them here.</p>
+{% endif %}
+{% endblock %}
