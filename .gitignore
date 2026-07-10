@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
-wiki.db
+wiki.db*
 static/uploads/
 venv/
 .env
+backups/

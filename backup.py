@@ -25,9 +25,14 @@ from datetime import datetime, timezone
 
 import models
 
-# Overridable via the BACKUP_DIR environment variable, same pattern as
-# models.DB_PATH / images.UPLOAD_DIR.
-BACKUP_DIR = os.environ.get("BACKUP_DIR", "backups")
+# Anchored to this file's own directory, not left as a bare relative path --
+# a scheduled task (PythonAnywhere's Task tab, cron, etc.) can easily run
+# with a different working directory than this script's own folder, which
+# would otherwise silently create backups/ somewhere unexpected instead of
+# next to wiki.db. Overridable via the BACKUP_DIR environment variable, same
+# pattern as models.DB_PATH / images.UPLOAD_DIR.
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+BACKUP_DIR = os.environ.get("BACKUP_DIR", os.path.join(APP_ROOT, "backups"))
 KEEP_DAYS = 30
 
 

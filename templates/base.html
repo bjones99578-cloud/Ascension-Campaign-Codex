@@ -38,6 +38,7 @@
       <img class="cat-icon" src="{{ url_for('static', filename='icons/sessionlog.svg') }}" alt="">
       Timeline
     </a>
+    <a href="{{ url_for('reference') }}" class="{% if request.path == url_for('reference') %}active{% endif %}">Reference</a>
     {% for cat in categories %}
       <a href="{{ url_for('category_view', category=cat) }}"
          class="cat-{{ cat.lower() }} {% if request.path == url_for('category_view', category=cat) %}active{% endif %}">

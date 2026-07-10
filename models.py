@@ -82,9 +82,19 @@ PARTY_SLOT_COUNT = 5
 # Fields with a standard fixed vocabulary render as dropdowns on the form;
 # everything else is free text or a number.
 
+# Species/Background lists match the 2024 Player's Handbook (the "revised"
+# 5e ruleset) rather than the original 2014 core lists -- notably Half-Elf
+# and Half-Orc aren't part of the 2024 core species list (their old niches
+# are folded into Human/Orc variant flavor instead), and the background list
+# was substantially reworked. A party still using the 2014 rules, or with a
+# character whose sheet predates this change, isn't blocked by any of this:
+# any value already saved on an existing entry keeps displaying correctly
+# even if it's no longer one of these built-in options (see the "current not
+# in f.options" handling on the entry form), and "Other/Homebrew" is always
+# available to type in anything not listed here.
 SPECIES_OPTIONS = [
-    "Human", "Elf", "Dwarf", "Halfling", "Gnome", "Half-Elf", "Half-Orc",
-    "Tiefling", "Dragonborn", "Other/Homebrew",
+    "Aasimar", "Dragonborn", "Dwarf", "Elf", "Gnome", "Goliath", "Halfling",
+    "Human", "Orc", "Tiefling", "Other/Homebrew",
 ]
 
 CLASS_OPTIONS = [
@@ -99,10 +109,65 @@ ALIGNMENT_OPTIONS = [
 ]
 
 BACKGROUND_OPTIONS = [
-    "Acolyte", "Charlatan", "Criminal", "Entertainer", "Folk Hero",
-    "Guild Artisan", "Hermit", "Noble", "Outlander", "Sage", "Sailor",
-    "Soldier", "Urchin", "Other/Homebrew",
+    "Acolyte", "Artisan", "Charlatan", "Criminal", "Entertainer", "Farmer",
+    "Guard", "Guide", "Hermit", "Merchant", "Noble", "Sage", "Sailor",
+    "Scribe", "Soldier", "Wayfarer", "Other/Homebrew",
 ]
+
+# Per-class subclass names, matching the 2024 Player's Handbook (4 per
+# class, 48 total). Powers the class-dependent Subclass dropdown on the
+# entry form (see entry_form.html) -- picking a Class there repopulates this
+# list via JS, keyed off this exact dict, embedded as JSON. The underlying
+# `subclass` column stays a plain text field (see DETAIL_FIELDS below), so a
+# subclass from an older campaign, a homebrew subclass, or anything typed in
+# via "+ Add new option..." still saves and displays fine even though it
+# isn't one of these 48 names.
+SUBCLASS_OPTIONS_BY_CLASS = {
+    "Barbarian": ["Path of the Berserker", "Path of the Wild Heart", "Path of the World Tree", "Path of the Zealot"],
+    "Bard": ["College of Dance", "College of Glamour", "College of Lore", "College of Valor"],
+    "Cleric": ["Life Domain", "Light Domain", "Trickery Domain", "War Domain"],
+    "Druid": ["Circle of the Land", "Circle of the Moon", "Circle of the Sea", "Circle of the Stars"],
+    "Fighter": ["Battle Master", "Champion", "Eldritch Knight", "Psi Warrior"],
+    "Monk": ["Warrior of Mercy", "Warrior of Shadow", "Warrior of the Elements", "Warrior of the Open Hand"],
+    "Paladin": ["Oath of Devotion", "Oath of Glory", "Oath of the Ancients", "Oath of Vengeance"],
+    "Ranger": ["Beast Master", "Fey Wanderer", "Gloom Stalker", "Hunter"],
+    "Rogue": ["Arcane Trickster", "Assassin", "Soulknife", "Thief"],
+    "Sorcerer": ["Aberrant Sorcery", "Clockwork Sorcery", "Draconic Sorcery", "Wild Magic Sorcery"],
+    "Warlock": ["Archfey Patron", "Celestial Patron", "Fiend Patron", "Great Old One Patron"],
+    "Wizard": ["Abjurer", "Diviner", "Evoker", "Illusionist"],
+}
+
+# Short, original flavor blurbs (not reproduced from any published book) for
+# the in-site Reference page (see /reference in app.py) -- just enough to
+# jog memory about what a species or class is about without leaving the
+# site to go look it up.
+SPECIES_BLURBS = {
+    "Aasimar": "Touched by a celestial heritage, often marked by faintly luminous eyes or an inner warmth -- many feel called toward healing or protecting others.",
+    "Dragonborn": "Proud, dragon-blooded folk with scaled skin and a breath weapon echoing their draconic ancestry; honor and clan mean a great deal to them.",
+    "Dwarf": "Hardy, stubborn folk of stone and forge, known for resilience, deep loyalty to kin and clan, and a natural toughness that shrugs off poison and hardship.",
+    "Elf": "Graceful, long-lived people with keen senses and an innate connection to magic; many pursue mastery of a craft over centuries rather than rushing toward it.",
+    "Gnome": "Small, endlessly curious tinkerers and spellcasters with a quick wit and an irrepressible love of invention, riddles, and mischief.",
+    "Goliath": "Towering mountain-folk built for endurance, shaped by harsh climates into a culture that prizes physical feats and stoic self-reliance.",
+    "Halfling": "Small, nimble, and famously lucky folk who value comfort, community, and a good meal as much as any daring adventure.",
+    "Human": "Adaptable and ambitious, humans are found in every corner of the world, prized for their drive, versatility, and knack for shaping their own destiny.",
+    "Orc": "Powerful and tireless folk whose relentless endurance and force of will make them formidable in nearly any calling they choose to pursue.",
+    "Tiefling": "Marked by an infernal bloodline visible in horns, a tail, or otherworldly eyes, tieflings often forge their own identity apart from the legacy they carry.",
+}
+
+CLASS_BLURBS = {
+    "Barbarian": "A fury-driven warrior who channels raw rage into devastating strength, shrugging off blows that would fell lesser combatants.",
+    "Bard": "A charismatic performer whose music and words weave real magic, inspiring allies and unraveling foes with equal skill.",
+    "Cleric": "A conduit for divine power, drawing on a god or divine force to heal wounds, smite enemies, and carry out a sacred purpose.",
+    "Druid": "A guardian of the natural world who commands primal magic and can take on the shapes of beasts to protect the wild.",
+    "Fighter": "A master of martial combat, trained to excel with nearly any weapon or armor through discipline and relentless practice.",
+    "Monk": "A disciplined martial artist who channels inner energy into supernatural speed, precision strikes, and resilience.",
+    "Paladin": "A sworn champion bound by a sacred oath, blending martial prowess with divine magic in service of a cause greater than themselves.",
+    "Ranger": "A skilled hunter and wilderness expert who blends martial skill with nature magic to track, survive, and protect the frontier.",
+    "Rogue": "A cunning specialist in stealth and precision, striking from the shadows and slipping past danger where brute force would fail.",
+    "Sorcerer": "A spellcaster whose magic wells up from an innate, often inherited source of power, shaped by force of will rather than study.",
+    "Warlock": "A spellcaster who has struck a bargain with a powerful otherworldly patron in exchange for magic beyond mortal reach.",
+    "Wizard": "A scholarly spellcaster whose power comes from rigorous study, arcane theory, and a carefully maintained spellbook.",
+}
 
 SETTLEMENT_SIZE_OPTIONS = [
     "Thorpe", "Hamlet", "Village", "Small Town", "Large Town",
@@ -197,7 +262,7 @@ DETAIL_FIELDS = {
         {"name": "character_status", "label": "Status", "type": "select", "options": CHARACTER_STATUS_OPTIONS},
         {"name": "is_player_character", "label": "Party Member", "type": "select", "options": PLAYER_CHARACTER_OPTIONS},
         {"name": "player_name", "label": "Player Name", "type": "text"},
-        {"name": "subclass", "label": "Subclass", "type": "text"},
+        {"name": "subclass", "label": "Subclass", "type": "subclass"},
         {"name": "key_item", "label": "Key Item", "type": "text"},
         {"name": "armor_class", "label": "Armor Class (AC)", "type": "number", "min": 0, "max": 40},
         {"name": "hit_points", "label": "Hit Points (HP)", "type": "number", "min": 0},

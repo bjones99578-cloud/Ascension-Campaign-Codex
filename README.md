@@ -50,7 +50,15 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   free-text content — fill in whichever apply, everything's optional:
   - **Character**: Species, Class, Level, Alignment, Background, Status
     (Alive / Dead / Missing / Retired), Armor Class (AC), Hit Points (HP),
-    Speed, Passive Perception, Deity / Patron, Personality Traits
+    Speed, Passive Perception, Deity / Patron, Personality Traits. Species,
+    Class, and Background are dropdowns matching the **2024 Player's
+    Handbook** (e.g. Species is Aasimar/Dragonborn/Dwarf/Elf/Gnome/Goliath/
+    Halfling/Human/Orc/Tiefling rather than the 2014 list) — pick "Other/
+    Homebrew" for anything from an older ruleset or a homebrew option
+    instead. **Subclass** is a dropdown too, and repopulates automatically
+    with that Class's 4 official subclasses the moment you pick a Class
+    (e.g. picking Wizard offers Abjurer/Diviner/Evoker/Illusionist) — pick
+    "+ Add new option…" if your subclass isn't in that list.
   - **City**: Settlement Size, Government, Population, Disposition
     (Friendly / Neutral / Hostile — toward the party)
   - **Organization**: Organization Type, Alignment, Status (Active /
@@ -76,6 +84,14 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   doesn't fit the standard list), and save the entry. That value is saved
   permanently, so it shows up as a normal option in that same dropdown for
   every entry and every player from then on — no editing code, no restart.
+  (Subclass is the one exception — since its options depend on which Class
+  is selected, a typed-in custom subclass saves fine on that entry but isn't
+  added to a shared list the way other dropdowns are.)
+- **Reference page**: the "Reference" link in the nav is a quick in-site
+  lookup for the Species and Classes on the entry form — a couple of
+  sentences of flavor per option (not full rules text, just enough to jog
+  your memory) plus each Class's 4 subclass names, so nobody has to leave
+  the site or dig out a physical Player's Handbook mid-session.
 - **Party Members vs. other characters**: everywhere Characters are listed
   together — the Characters category page, a City's or Organization's page,
   and City View — they're split into a "Party Members" table and an "Other

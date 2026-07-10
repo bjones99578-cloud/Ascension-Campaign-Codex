@@ -1115,3 +1115,47 @@ code {
   text-decoration: underline;
 }
 .map-pin-submap-link:hover { color: var(--accent-hover); }
+
+/* ---------- Reference page (/reference) ---------- */
+/* Quick-lookup cards for Species and Classes, styled like a lighter, more
+   text-heavy cousin of the homepage's .category-card grid -- these aren't
+   clickable links to another entry, just flavor text, so they use a plain
+   div instead of an anchor and don't get the hover-lift treatment. Class
+   cards additionally pick up a "class-<slug>" class (see CLASS_THEME_SLUGS)
+   so each one glows in that class's own ink color, same as a Party Roster card. */
+.reference-section { margin-bottom: 2.5rem; }
+.reference-section h2 {
+  color: var(--cat-light);
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.reference-card {
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+}
+.reference-card h3 {
+  margin: 0 0 0.5rem;
+  color: var(--cat-color);
+  font-size: 1.1rem;
+}
+.reference-card p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+.reference-subclasses {
+  margin: 0.7rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.reference-subclasses strong { color: var(--cat-light); }

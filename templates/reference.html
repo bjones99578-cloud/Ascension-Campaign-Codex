@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Reference — Ascension Campaign Codex{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Reference</h1>
+</div>
+<p class="empty-state">A quick memory-jog for the Species and Classes used on the entry form's dropdowns (2024 rules) — not full rules text, just enough flavor to remember what's what without digging out a book.</p>
+
+<div class="reference-section">
+  <h2>Species</h2>
+  <div class="reference-grid">
+    {% for s in species %}
+      <div class="reference-card">
+        <h3>{{ s.name }}</h3>
+        <p>{{ s.blurb }}</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="reference-section">
+  <h2>Classes</h2>
+  <div class="reference-grid">
+    {% for c in classes %}
+      <div class="reference-card {% if c.theme_slug %}class-{{ c.theme_slug }}{% endif %}">
+        <h3>{{ c.name }}</h3>
+        <p>{{ c.blurb }}</p>
+        {% if c.subclasses %}
+          <p class="reference-subclasses"><strong>Subclasses:</strong> {{ c.subclasses | join(", ") }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

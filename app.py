@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 
 from flask import Flask, g, redirect, render_template, request, send_from_directory, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -10,6 +11,21 @@ import models
 from rendering import render_wiki_content
 
 app = Flask(__name__)
+if not os.environ.get("SECRET_KEY"):
+    # Not fatal -- a small trusted-party app shouldn't refuse to start over
+    # this -- but silent-and-insecure is worse than silent-and-loud. Session
+    # cookies (currently just the DM Mode toggle and the "your name"
+    # field) are signed with this key, so a known default value in the
+    # public GitHub repo means anyone could forge one. This prints to
+    # whatever the host's own startup/error log is (PythonAnywhere's Error
+    # log, Render's log stream, etc.), so it's visible without needing to
+    # go looking for it.
+    print(
+        "WARNING: SECRET_KEY environment variable is not set -- using the "
+        "insecure default from source code. Set a real SECRET_KEY (see "
+        "README.md) before real party data depends on this deployment.",
+        file=sys.stderr,
+    )
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 # 20 MB covers even a large modern phone photo. This is just a sanity cap on
 # the raw upload, not the stored file size -- images.py compresses and
@@ -144,6 +160,7 @@ def inject_globals():
         "category_counts": models.category_counts(conn),
         "current_author": session.get("display_name", ""),
         "detail_fields": models.merged_detail_fields(conn),
+        "subclass_options_by_class": models.SUBCLASS_OPTIONS_BY_CLASS,
     }
 
 
@@ -811,6 +828,31 @@ def party_unassign():
         conn.execute("UPDATE entry SET pc_slot = NULL WHERE id = ?", (character_id,))
         conn.commit()
     return redirect(url_for("party_roster"))
+
+
+@app.route("/reference")
+def reference():
+    """A quick in-site lookup page for the 2024-ruleset Species and Classes
+    used throughout the entry form's dropdowns -- a few sentences of original
+    flavor per option (not book text) plus each Class's 4 subclass names, so
+    nobody has to leave the site or dig out a physical Player's Handbook just
+    to jog their memory on what a species or class is about."""
+    species = [
+        {"name": name, "blurb": models.SPECIES_BLURBS.get(name, "")}
+        for name in models.SPECIES_OPTIONS
+        if name != "Other/Homebrew"
+    ]
+    classes = [
+        {
+            "name": name,
+            "blurb": models.CLASS_BLURBS.get(name, ""),
+            "subclasses": models.SUBCLASS_OPTIONS_BY_CLASS.get(name, []),
+            "theme_slug": models.CLASS_THEME_SLUGS.get(name),
+        }
+        for name in models.CLASS_OPTIONS
+        if name != "Other/Homebrew"
+    ]
+    return render_template("reference.html", species=species, classes=classes)
 
 
 @app.route("/loot")

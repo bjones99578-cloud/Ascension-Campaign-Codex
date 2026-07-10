@@ -64,6 +64,21 @@
             </select>
             <input type="text" class="custom-option-input" style="display:none"
                    placeholder="Type a new {{ f.label.lower() }}, then save the entry to add it">
+          {% elif f.type == "subclass" %}
+            {# Dropdown whose options depend on whichever Class is currently selected --
+               repopulated client-side from the subclass-data JSON blob below (see the
+               script at the bottom of this template). Reuses the same "option-select" /
+               "+ Add new option..." mechanism as a normal select field, so a subclass
+               from an older save, a homebrew subclass, or anything typed in via
+               "+ Add new option..." still shows up and saves correctly even though it
+               isn't one of the 48 standard 2024 subclass names. #}
+            {% set current = form.get(f.name) %}
+            <select name="{{ f.name }}" class="option-select subclass-select" data-current="{{ current or '' }}">
+              <option value="">— None —</option>
+              <option value="__add_new__">+ Add new option…</option>
+            </select>
+            <input type="text" class="custom-option-input" style="display:none"
+                   placeholder="Type a new subclass, then save the entry to add it">
           {% elif f.type == "number" %}
             <input type="number" name="{{ f.name }}"
                    value="{{ form.get(f.name) if form.get(f.name) is not none else '' }}"
@@ -213,6 +228,8 @@
     <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp">
   </label>
 
+  <script type="application/json" id="subclass-data">{{ subclass_options_by_class | tojson }}</script>
+
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">{% if mode == "new" %}Create Entry{% else %}Save Changes{% endif %}</button>
     {% if mode == "edit" %}
@@ -277,6 +294,46 @@
         }
       });
     });
+  })();
+
+  (function () {
+    // Keeps the Subclass dropdown's option list in sync with whichever Class
+    // is currently selected, using the subclass-data JSON blob above (built
+    // from models.SUBCLASS_OPTIONS_BY_CLASS). On page load it preserves
+    // whatever subclass was already saved (even a custom/homebrew one, or one
+    // from a class the party has since changed) so nothing already typed in
+    // is silently lost; once the person actually changes the Class dropdown
+    // themselves, the old subclass no longer necessarily applies, so the
+    // selection resets and repopulates for the newly chosen class.
+    var dataEl = document.getElementById("subclass-data");
+    var classSelect = document.querySelector('select[name="char_class"]');
+    var subclassSelect = document.querySelector("select.subclass-select");
+    if (!dataEl || !classSelect || !subclassSelect) return;
+    var subclassesByClass = JSON.parse(dataEl.textContent);
+
+    function populate(selectedValue) {
+      var addNewOpt = subclassSelect.querySelector('option[value="__add_new__"]');
+      subclassSelect.querySelectorAll("option").forEach(function (opt) {
+        if (opt.value !== "" && opt.value !== "__add_new__") opt.remove();
+      });
+      var options = subclassesByClass[classSelect.value] || [];
+      options.forEach(function (name) {
+        var opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        subclassSelect.insertBefore(opt, addNewOpt);
+      });
+      if (selectedValue && options.indexOf(selectedValue) === -1) {
+        var customOpt = document.createElement("option");
+        customOpt.value = selectedValue;
+        customOpt.textContent = selectedValue;
+        subclassSelect.insertBefore(customOpt, addNewOpt);
+      }
+      subclassSelect.value = selectedValue || "";
+    }
+
+    populate(subclassSelect.dataset.current || "");
+    classSelect.addEventListener("change", function () { populate(""); });
   })();
 
   (function () {
