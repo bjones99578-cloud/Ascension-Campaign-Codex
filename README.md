@@ -205,8 +205,34 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
     anything — it just flags that you're over the currently-unlocked slot
     count (with an explanation right on the page) until you either raise the
     level back up or remove some facilities yourself.
+  - **Order progress tracking**: any Special Facility can start one project
+    tracking how far along its Current Order is — set a goal in **Days** or
+    **Hours**, then fill it in yourself as time passes at the table (see
+    "Project tracking" below for exactly how). Deliberately independent of
+    Session Log dates, since Bastion downtime doesn't always line up neatly
+    with a logged session. A facility runs one project at a time; once it's
+    marked done, "+ Start Project" reappears so you can queue up its next
+    Order.
   - **No live D&D Beyond import for this** (there's nothing to import — see
     above); everything here is entered and named by hand, by design.
+- **Personal Projects**: any Player Character's own entry page gets a
+  "Personal Projects" section — built for the party's crafters, but usable
+  for any personal downtime goal. Unlike the Bastion, there's no cap: a
+  character can run as many simultaneous projects as they like, each with
+  its own name (e.g. "Brewing 3 Potions of Healing"), goal, and notes.
+  - **Project tracking (shared by Bastion Orders and Personal Projects)**:
+    every project gets a completion progress bar plus a goal you set
+    yourself in **Days** or **Hours**. A goal of 14 or fewer renders as a
+    row of numbered boxes — click box 4 to mark straight through day/hour 4,
+    click a filled box to back progress up again — since a small punch-card
+    like that is faster to update mid-session than typing a number. A
+    longer goal (more than 14) falls back to a plain "elapsed" number field
+    instead, since a 30-box row stops being readable at a glance. Either
+    way, nothing here is tied to Session Log dates or any other automatic
+    clock — you update it by hand whenever time passes at the table, the
+    same way you'd cross something off on a paper sheet. Shrinking a
+    project's goal below its current progress pulls progress back down to
+    match, so it never reads as "9 of 7 days done."
 - **Timeline**: the "Timeline" link in the nav is the campaign's story so
   far as a single chronological feed — every Session Log entry in play
   order (earliest first), each showing its Session #, Session Date,

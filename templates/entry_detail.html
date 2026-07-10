@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_project_widget.html" as pw with context %}
 {% block title %}{{ entry['name'] }} — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-{{ entry['category'].lower() }}{% endblock %}
 
@@ -234,6 +235,22 @@
       {{ item_table("Carried Items", related.carried_items,
           "No items yet — add [[" ~ entry['name'] ~ "]] to an item's entry, or set it as their Current Holder, to list it here.") }}
     {% endif %}
+  {% endif %}
+
+  {% if projects is not none %}
+    <div class="divider"><span class="divider-mark"></span></div>
+    <div class="related-block">
+      <div class="section-heading"><span class="section-heading-mark"></span>Personal Projects<span class="section-heading-mark"></span></div>
+      <p class="summary">{{ entry['name'] }}'s own downtime/crafting projects — separate from the shared Bastion, and never tied to Session Log dates. Set a goal in days or hours and update the progress below yourself whenever time passes at the table.</p>
+      {% if projects %}
+        {% for project in projects %}
+          {{ pw.project_widget(project, url_for('entry_detail', entry_id=entry['id'])) }}
+        {% endfor %}
+      {% else %}
+        <p class="empty-state">No personal projects yet — start one below.</p>
+      {% endif %}
+      {{ pw.project_add_form('character', entry['id'], url_for('entry_detail', entry_id=entry['id'])) }}
+    </div>
   {% endif %}
 
   {% if not related or backlinks %}

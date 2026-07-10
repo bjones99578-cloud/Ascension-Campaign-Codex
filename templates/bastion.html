@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_project_widget.html" as pw with context %}
 {% block title %}Bastion — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-bastion{% endblock %}
 
@@ -46,6 +47,19 @@
     <tr class="bastion-description-row">
       <td colspan="{{ 6 if facility['slot_category'] == 'Special' else 4 }}">
         <span class="bastion-description">{{ current_type.description }}</span>
+      </td>
+    </tr>
+  {% endif %}
+  {% if facility['slot_category'] == 'Special' %}
+    {% set flist = facility_projects.get(facility['id'], []) %}
+    <tr class="bastion-project-row">
+      <td colspan="6">
+        {% if flist %}
+          {{ pw.project_widget(flist[-1], url_for('bastion_page')) }}
+        {% endif %}
+        {% if not flist or flist[-1]['progress_amount'] >= flist[-1]['target_amount'] %}
+          {{ pw.project_add_form('bastion_facility', facility['id'], url_for('bastion_page'), '+ Start Project') }}
+        {% endif %}
       </td>
     </tr>
   {% endif %}

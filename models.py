@@ -514,11 +514,34 @@ def init_db():
             custom_description TEXT
         );
 
+        -- A trackable "in progress" task with a Days-or-Hours goal, a
+        -- completion progress bar, and manually-advanced progress that is
+        -- deliberately NOT tied to Session Log dates -- the party updates it
+        -- themselves whenever time passes at the table. owner_type/owner_id
+        -- point at whatever the project belongs to: a Special Facility's
+        -- current Order ('bastion_facility', bastion_facility.id) or a
+        -- Player Character's own personal crafting project ('character',
+        -- entry.id). progress_amount is always kept between 0 and
+        -- target_amount by the model layer, never trusted as-is from a form.
+        CREATE TABLE IF NOT EXISTS project (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_type TEXT NOT NULL,
+            owner_id INTEGER NOT NULL,
+            name TEXT,
+            unit TEXT NOT NULL DEFAULT 'days',
+            target_amount INTEGER NOT NULL DEFAULT 1,
+            progress_amount INTEGER NOT NULL DEFAULT 0,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_link_source ON link (source_id);
         CREATE INDEX IF NOT EXISTS idx_link_target ON link (target_id);
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
         CREATE INDEX IF NOT EXISTS idx_custom_option_field ON custom_option (field_name);
         CREATE INDEX IF NOT EXISTS idx_map_pin_entry ON map_pin (entry_id);
+        CREATE INDEX IF NOT EXISTS idx_project_owner ON project (owner_type, owner_id);
         """
     )
     # Lightweight migrations for databases created before these columns existed.
@@ -1178,6 +1201,123 @@ def set_bastion_facility_type_override(conn, facility_key, custom_name, custom_d
             (facility_key, custom_name, custom_description),
         )
     conn.commit()
+
+
+# A project's day/hour goal renders as an individual tap-to-fill checklist
+# box up to this size (see templates/_project_widget.html) -- past it, a
+# plain "elapsed" number field takes over instead, since a 90-box checklist
+# stops being useful at a glance. Kept here as the one source of truth so the
+# server-side clamp in add_project/update_project matches what the template
+# actually draws.
+PROJECT_CHECKLIST_MAX = 14
+
+PROJECT_UNIT_OPTIONS = ["days", "hours"]
+
+PROJECT_OWNER_TYPES = ("bastion_facility", "character")
+
+
+def get_projects(conn, owner_type, owner_id):
+    """All projects for one owner (a Bastion Special Facility's Order, or a
+    Player Character's own personal crafting projects), oldest first."""
+    return conn.execute(
+        "SELECT * FROM project WHERE owner_type = ? AND owner_id = ? ORDER BY id ASC",
+        (owner_type, owner_id),
+    ).fetchall()
+
+
+def get_project(conn, project_id):
+    return conn.execute("SELECT * FROM project WHERE id = ?", (project_id,)).fetchone()
+
+
+def _clamp_project_target(target_amount):
+    try:
+        target_amount = int(target_amount)
+    except (TypeError, ValueError):
+        target_amount = 1
+    return max(1, target_amount)
+
+
+def _clamp_project_progress(progress_amount, target_amount):
+    try:
+        progress_amount = int(progress_amount)
+    except (TypeError, ValueError):
+        progress_amount = 0
+    return max(0, min(progress_amount, target_amount))
+
+
+def add_project(conn, owner_type, owner_id, name, unit, target_amount, notes=None):
+    """owner_type is 'bastion_facility' (owner_id -> bastion_facility.id) or
+    'character' (owner_id -> entry.id, a Player Character). New projects
+    always start at 0 progress -- there's no "already partway done" entry
+    point, since that's what the checklist/counter is for."""
+    unit = unit if unit in PROJECT_UNIT_OPTIONS else "days"
+    target_amount = _clamp_project_target(target_amount)
+    ts = now_iso()
+    cur = conn.execute(
+        """
+        INSERT INTO project (owner_type, owner_id, name, unit, target_amount, progress_amount, notes, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)
+        """,
+        (owner_type, owner_id, (name or "").strip() or None, unit, target_amount, (notes or "").strip() or None, ts, ts),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def update_project(conn, project_id, name, unit, target_amount, notes):
+    """Edits a project's description/goal (name, unit, target, notes) --
+    deliberately leaves progress_amount alone, except clamping it back down
+    if the new target is smaller than progress already logged (so a project
+    can never read as "9 of 7 days" after someone shrinks its goal)."""
+    project = get_project(conn, project_id)
+    if not project:
+        return
+    unit = unit if unit in PROJECT_UNIT_OPTIONS else "days"
+    target_amount = _clamp_project_target(target_amount)
+    progress_amount = _clamp_project_progress(project["progress_amount"], target_amount)
+    conn.execute(
+        """
+        UPDATE project SET name = ?, unit = ?, target_amount = ?, progress_amount = ?, notes = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            (name or "").strip() or None, unit, target_amount, progress_amount,
+            (notes or "").strip() or None, now_iso(), project_id,
+        ),
+    )
+    conn.commit()
+
+
+def update_project_progress(conn, project_id, progress_amount):
+    """Just the elapsed-so-far value -- what both the checklist boxes and
+    the plain counter field submit. Always clamped to [0, target_amount] so
+    a stray form value (or someone editing the URL) can't push a project
+    over 100% or negative."""
+    project = get_project(conn, project_id)
+    if not project:
+        return
+    progress_amount = _clamp_project_progress(progress_amount, project["target_amount"])
+    conn.execute(
+        "UPDATE project SET progress_amount = ?, updated_at = ? WHERE id = ?",
+        (progress_amount, now_iso(), project_id),
+    )
+    conn.commit()
+
+
+def delete_project(conn, project_id):
+    conn.execute("DELETE FROM project WHERE id = ?", (project_id,))
+    conn.commit()
+
+
+def has_incomplete_project(conn, owner_type, owner_id):
+    """True if this owner already has a project that isn't finished yet --
+    used to cap a Bastion Special Facility at one active project at a time
+    (matching its one Current Order), while Characters are never capped."""
+    row = conn.execute(
+        "SELECT 1 FROM project WHERE owner_type = ? AND owner_id = ? AND progress_amount < target_amount LIMIT 1",
+        (owner_type, owner_id),
+    ).fetchone()
+    return row is not None
 
 
 def get_player_characters(conn):

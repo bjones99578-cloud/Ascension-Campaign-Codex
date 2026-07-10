@@ -924,6 +924,72 @@ code {
 .bastion-type-name-input { width: 14rem; font-weight: bold; }
 .bastion-type-desc-input { flex: 1; min-width: 16rem; }
 
+/* The Order-progress project nested under a Special Facility's own row --
+   full-width, no top border/padding so it reads as part of that facility's
+   row rather than a new table entry. */
+.bastion-project-row td { border-top: none; padding-top: 0; padding-bottom: 0.9rem; background: none; }
+
+/* ---------- projects ---------- */
+/* Shared by the Bastion (a Special Facility's current Order) and a Player
+   Character's own page (personal crafting/downtime projects) -- see
+   templates/_project_widget.html. Re-tints via --cat-* like everything
+   else, so the same card reads teal on the Bastion and violet on a
+   Character's page with no extra styling needed. */
+
+.project-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0 1rem;
+}
+.project-card-complete { border-color: var(--cat-color); box-shadow: 0 0 10px var(--cat-glow); }
+.project-card-header { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.4rem; }
+.project-input-name { min-width: 12rem; flex: 1; font-weight: bold; }
+.project-input-unit { width: 6rem; }
+.project-input-target { width: 4.5rem; }
+.project-input-notes { width: 100%; margin-bottom: 0.6rem; font-style: italic; }
+
+.project-progress { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.project-bar {
+  flex: 1;
+  height: 0.6rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.project-bar-fill { height: 100%; background: var(--cat-color); transition: width 0.2s ease; }
+.project-progress-label { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+.project-complete-tag { color: var(--cat-light); font-weight: bold; }
+
+/* The tap-to-fill checklist for a goal of 14 or fewer days/hours (see
+   models.PROJECT_CHECKLIST_MAX) -- each box is its own tiny form, so
+   clicking box 4 sets progress straight to 4 with no page-reload jank
+   beyond the redirect back to this same page. */
+.project-checklist { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.project-box-form { display: inline-block; }
+.project-box {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.project-box.is-filled { background: var(--cat-color); border-color: var(--cat-light); color: var(--parchment); font-weight: bold; }
+.project-box:hover { border-color: var(--cat-color); }
+
+/* The plain "elapsed" counter that takes over once a goal is too long to
+   render sensibly as a row of boxes. */
+.project-counter-form { display: flex; align-items: center; gap: 0.6rem; }
+.project-counter-form input { width: 5rem; }
+
+.project-add-form { margin: 0.5rem 0 1rem; }
+
 /* ---------- timeline ---------- */
 
 .timeline {

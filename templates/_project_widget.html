@@ -1,0 +1,94 @@
+{# Shared rendering for a trackable project (a Bastion Special Facility's
+   current Order, or a Player Character's own personal crafting project).
+   Imported by bastion.html and entry_detail.html so both places render and
+   behave identically -- see models.py's project_* functions for the data
+   side. Deliberately has no notion of Session Log dates: progress only ever
+   moves when the party clicks/types it themselves. #}
+
+{% macro project_widget(project, next_url) %}
+  {% set form_id = "project-form-" ~ project['id'] %}
+  {% set pct = (100 * project['progress_amount'] / project['target_amount']) | round(0, 'floor') | int %}
+  {% set is_complete = project['progress_amount'] >= project['target_amount'] %}
+  <form id="{{ form_id }}" method="post" action="{{ url_for('project_update', project_id=project['id']) }}"></form>
+  <div class="project-card{% if is_complete %} project-card-complete{% endif %}">
+    <div class="project-card-header">
+      <input type="text" name="name" form="{{ form_id }}" value="{{ project['name'] or '' }}"
+             placeholder="Project name…" class="loot-input project-input-name">
+      <select name="unit" form="{{ form_id }}" class="loot-input project-input-unit">
+        <option value="days"{% if project['unit'] == 'days' %} selected{% endif %}>Days</option>
+        <option value="hours"{% if project['unit'] == 'hours' %} selected{% endif %}>Hours</option>
+      </select>
+      <input type="number" name="target_amount" form="{{ form_id }}" min="1" value="{{ project['target_amount'] }}"
+             class="loot-input project-input-target" title="Goal (days/hours needed)">
+      <input type="hidden" name="next" value="{{ next_url }}" form="{{ form_id }}">
+      <button type="submit" form="{{ form_id }}" class="btn btn-sm">Save</button>
+      <form method="post" action="{{ url_for('project_delete', project_id=project['id']) }}" class="loot-delete-form"
+            onsubmit="return confirm('Delete this project? This cannot be undone.');">
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+    <input type="text" name="notes" form="{{ form_id }}" value="{{ project['notes'] or '' }}"
+           placeholder="Notes…" class="loot-input project-input-notes">
+
+    <div class="project-progress">
+      <div class="project-bar"><div class="project-bar-fill" style="width: {{ pct }}%;"></div></div>
+      <span class="project-progress-label">
+        {{ project['progress_amount'] }} / {{ project['target_amount'] }} {{ project['unit'] }}
+        {%- if is_complete %} — <span class="project-complete-tag">✓ Complete</span>{% endif %}
+      </span>
+    </div>
+
+    {% if project['target_amount'] <= 14 %}
+      <div class="project-checklist">
+        {% for i in range(1, project['target_amount'] + 1) %}
+          <form method="post" action="{{ url_for('project_progress', project_id=project['id']) }}" class="project-box-form">
+            <input type="hidden" name="progress_amount" value="{{ i }}">
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <button type="submit" class="project-box{% if i <= project['progress_amount'] %} is-filled{% endif %}"
+                    title="Mark through {{ project['unit'] }} {{ i }}">{{ i }}</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% else %}
+      <form method="post" action="{{ url_for('project_progress', project_id=project['id']) }}" class="project-counter-form">
+        <label>
+          Elapsed {{ project['unit'] }}
+          <input type="number" name="progress_amount" min="0" max="{{ project['target_amount'] }}" value="{{ project['progress_amount'] }}">
+        </label>
+        <input type="hidden" name="next" value="{{ next_url }}">
+        <button type="submit" class="btn btn-sm">Update</button>
+      </form>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro project_add_form(owner_type, owner_id, next_url, button_label="+ New Project") %}
+  <form class="entry-form search-filters-form project-add-form" method="post" action="{{ url_for('project_add') }}">
+    <input type="hidden" name="owner_type" value="{{ owner_type }}">
+    <input type="hidden" name="owner_id" value="{{ owner_id }}">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <label>
+      Project name
+      <input type="text" name="name" placeholder="e.g. 3 Potions of Healing">
+    </label>
+    <label>
+      Goal
+      <input type="number" name="target_amount" min="1" value="7" style="width: 5rem;">
+    </label>
+    <label>
+      Unit
+      <select name="unit">
+        <option value="days" selected>Days</option>
+        <option value="hours">Hours</option>
+      </select>
+    </label>
+    <label>
+      Notes
+      <input type="text" name="notes" placeholder="optional notes…">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">{{ button_label }}</button>
+    </div>
+  </form>
+{% endmacro %}

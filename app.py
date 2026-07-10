@@ -388,6 +388,14 @@ def entry_detail(entry_id):
         if entry["current_holder_id"]:
             related_entities["current_holder"] = models.get_entry(conn, entry["current_holder_id"])
 
+    # Personal crafting/downtime projects are a Player Character thing only
+    # (an NPC has no "party member" tracking anything for themselves) --
+    # projects is left undefined for every other entry so the template can
+    # gate the whole section on it existing at all.
+    projects = None
+    if entry["category"] == "Character" and entry["is_player_character"] == "Yes":
+        projects = models.get_projects(conn, "character", entry_id)
+
     return render_template(
         "entry_detail.html",
         entry=entry,
@@ -395,6 +403,7 @@ def entry_detail(entry_id):
         backlinks=backlinks,
         related=related,
         related_entities=related_entities,
+        projects=projects,
     )
 
 
@@ -972,6 +981,12 @@ def bastion_page():
     facility_types = bastion.merged_facility_types(conn)
     available_special = [f for f in facility_types["special"] if f["level"] <= level]
     facility_types_by_key = {f["key"]: f for f in facility_types["basic"] + facility_types["special"]}
+    # Each Special Facility gets its own Order-progress project, one at a
+    # time -- fetched up front (rather than per-row in the template) so the
+    # template only ever does a dict lookup, never its own query.
+    facility_projects = {
+        f["id"]: models.get_projects(conn, "bastion_facility", f["id"]) for f in special_facilities
+    }
     return render_template(
         "bastion.html",
         bastion_level=level,
@@ -984,6 +999,7 @@ def bastion_page():
         special_slots_total=bastion.special_slot_count(level),
         order_options=bastion.ORDER_OPTIONS,
         facility_level_tiers=bastion.FACILITY_LEVEL_TIERS,
+        facility_projects=facility_projects,
     )
 
 
@@ -1064,6 +1080,80 @@ def bastion_facility_type_update(facility_key):
         request.form.get("custom_description", ""),
     )
     return redirect(url_for("bastion_page"))
+
+
+def _safe_next(fallback_endpoint="index"):
+    """Every project form carries a hidden 'next' field so Save/Delete lands
+    the party back on whichever page they were on (the Bastion, or a
+    Character's own page) instead of a hardcoded route. Only ever trusts a
+    same-site relative path (starts with a single '/') -- anything else
+    (a bare form submitted from somewhere unexpected) falls back to the
+    homepage rather than redirecting off-site."""
+    next_url = request.form.get("next", "")
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return url_for(fallback_endpoint)
+
+
+@app.route("/projects", methods=["POST"])
+def project_add():
+    """Starts a new trackable project -- either a Bastion Special Facility's
+    current Order (owner_type='bastion_facility') or a Player Character's own
+    personal crafting project (owner_type='character'). A facility is capped
+    at one active (incomplete) project at a time to match its single Current
+    Order; Characters can run as many at once as they like."""
+    conn = get_conn()
+    owner_type = request.form.get("owner_type")
+    owner_id = request.form.get("owner_id", type=int)
+    if owner_type not in models.PROJECT_OWNER_TYPES or not owner_id:
+        return redirect(_safe_next())
+    if owner_type == "bastion_facility":
+        facility = models.get_bastion_facility(conn, owner_id)
+        if not facility or models.has_incomplete_project(conn, owner_type, owner_id):
+            return redirect(_safe_next())
+    models.add_project(
+        conn, owner_type, owner_id,
+        request.form.get("name", ""),
+        request.form.get("unit", "days"),
+        request.form.get("target_amount", type=int),
+        request.form.get("notes", ""),
+    )
+    return redirect(_safe_next())
+
+
+@app.route("/projects/<int:project_id>/update", methods=["POST"])
+def project_update(project_id):
+    """Edits a project's name/goal/notes -- the counterpart to the checklist
+    boxes and counter field below, which only ever touch progress_amount."""
+    conn = get_conn()
+    models.update_project(
+        conn, project_id,
+        request.form.get("name", ""),
+        request.form.get("unit", "days"),
+        request.form.get("target_amount", type=int),
+        request.form.get("notes", ""),
+    )
+    return redirect(_safe_next())
+
+
+@app.route("/projects/<int:project_id>/progress", methods=["POST"])
+def project_progress(project_id):
+    """Advances (or rewinds) a project's elapsed days/hours -- posted by
+    either an individual checklist box (click day 4 -> progress_amount=4) or
+    the plain counter field for goals too large to render as a checklist.
+    Deliberately has nothing to do with Session Log dates -- the party
+    updates this by hand whenever time passes at the table, in or out of a
+    session."""
+    conn = get_conn()
+    models.update_project_progress(conn, project_id, request.form.get("progress_amount", type=int))
+    return redirect(_safe_next())
+
+
+@app.route("/projects/<int:project_id>/delete", methods=["POST"])
+def project_delete(project_id):
+    conn = get_conn()
+    models.delete_project(conn, project_id)
+    return redirect(_safe_next())
 
 
 @app.route("/timeline")
