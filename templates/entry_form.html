@@ -40,13 +40,26 @@
     <div class="field-group" data-show-for="{{ cat }}">
       {% for f in fields %}
         <label>
-          {{ f.label }}
+          {% if f.name == "key_item" %}
+            <span class="key-item-label">{{ f.label }}</span>
+          {% else %}
+            {{ f.label }}
+          {% endif %}
           {% if f.type == "select" %}
+            {% set current = form.get(f.name) %}
             <select name="{{ f.name }}" class="option-select">
               <option value="">— None —</option>
               {% for opt in f.options %}
-                <option value="{{ opt }}" {% if form.get(f.name) == opt %}selected{% endif %}>{{ opt }}</option>
+                <option value="{{ opt }}" {% if current == opt %}selected{% endif %}>{{ opt }}</option>
               {% endfor %}
+              {% if current and current not in f.options %}
+                {# A value that isn't a standard option yet -- e.g. prefilled by the
+                   D&D Beyond importer (a race/class/background it doesn't have),
+                   or typed into "+ Add new option..." on a submission that hit a
+                   validation error before it could be saved as a real option.
+                   Show it selected so it isn't silently lost from view. #}
+                <option value="{{ current }}" selected>{{ current }}</option>
+              {% endif %}
               <option value="__add_new__">+ Add new option…</option>
             </select>
             <input type="text" class="custom-option-input" style="display:none"
@@ -220,6 +233,21 @@
         }
       });
     });
+  })();
+
+  (function () {
+    // Party members carry a "Gold Sign" instead of a generic "Key Item" --
+    // same underlying field, just relabeled live as the Party Member dropdown
+    // changes, so it reads right whether you're filling this in for a hero
+    // seated in the roster or an ordinary NPC.
+    var partyMemberSelect = document.querySelector('select[name="is_player_character"]');
+    var keyItemLabel = document.querySelector(".key-item-label");
+    if (!partyMemberSelect || !keyItemLabel) return;
+    function syncKeyItemLabel() {
+      keyItemLabel.textContent = (partyMemberSelect.value === "Yes") ? "Gold Sign" : "Key Item";
+    }
+    partyMemberSelect.addEventListener("change", syncKeyItemLabel);
+    syncKeyItemLabel();
   })();
 </script>
 {% endblock %}

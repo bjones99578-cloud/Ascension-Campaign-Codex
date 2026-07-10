@@ -351,7 +351,7 @@ def import_dndbeyond():
                         "leader_id": None,
                         "current_city_id": None,
                         "pc_slot": None,
-                        **models.empty_details(),
+                        **{**models.empty_details(), **fields.get("details", {})},
                     },
                     **relationship_options(get_conn()),
                 )

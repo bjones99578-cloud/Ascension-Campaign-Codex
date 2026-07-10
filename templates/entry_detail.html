@@ -63,7 +63,8 @@
     <div class="entry-relations">
       {% for f in df %}
         {% if entry[f.name] %}
-          <span><span class="relation-label">{{ f.label }}:</span> {{ entry[f.name] }}</span>
+          {% set field_label = "Gold Sign" if (f.name == "key_item" and entry["is_player_character"] == "Yes") else f.label %}
+          <span><span class="relation-label">{{ field_label }}:</span> {{ entry[f.name] }}</span>
         {% endif %}
       {% endfor %}
       {% if related_entities.home_city %}

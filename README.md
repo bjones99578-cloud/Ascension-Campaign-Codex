@@ -107,13 +107,22 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   needed beyond picking the dropdown or writing the `[[link]]`.
 - **Import from D&D Beyond**: on the New Entry page, "Import from D&D Beyond"
   lets you paste a character's D&D Beyond URL (the character's sheet privacy
-  must be set to Public) and pre-fill a new Character entry with their race,
-  class, stats, background, and backstory. This relies on an internal D&D
-  Beyond endpoint that isn't an official, supported API — D&D Beyond staff
-  have said outright they can change or break it without notice — so treat it
-  as a convenience that might stop working someday, not something to depend
-  on. If it ever fails, "Enter manually instead" is right there on the same
-  page.
+  must be set to Public) and pre-fill a new Character entry — not just the
+  write-up, but the actual structured fields too: Species, Class, Subclass,
+  Level (total, across every class for a multiclassed character), Alignment,
+  Background, Player Name (their D&D Beyond username), and Status/Party
+  Member default to Alive/Yes since an importable sheet is always an active
+  PC. The write-up itself still gets stats, personality traits, and backstory.
+  A race, class, or background D&D Beyond has that isn't one of the form's
+  standard dropdown choices (a less common race, Artificer, a homebrew
+  background) still comes through as-is rather than getting forced into
+  "Other" — and becomes a real dropdown option itself the moment you save the
+  entry, per "Adding your own dropdown options" above. Review everything
+  before saving; this relies on an internal D&D Beyond endpoint that isn't an
+  official, supported API — D&D Beyond staff have said outright they can
+  change or break it without notice — so treat it as a convenience that might
+  stop working someday, not something to depend on. If it ever fails, "Enter
+  manually instead" is right there on the same page.
 
 Note on renaming: if you rename an entry, any existing `[[OldName]]` links
 elsewhere will show up as a "click to create" link until someone edits that

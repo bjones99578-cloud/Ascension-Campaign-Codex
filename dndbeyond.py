@@ -24,6 +24,21 @@ ABILITY_NAMES = {
     6: "Charisma",
 }
 
+# D&D Beyond stores alignment as a fixed 1-9 id rather than a name. This is
+# the order D&D Beyond's own alignment picker uses, and lines up 1-for-1 with
+# models.ALIGNMENT_OPTIONS (index 5 there is "True Neutral").
+ALIGNMENT_BY_ID = {
+    1: "Lawful Good",
+    2: "Neutral Good",
+    3: "Chaotic Good",
+    4: "Lawful Neutral",
+    5: "True Neutral",
+    6: "Chaotic Neutral",
+    7: "Lawful Evil",
+    8: "Neutral Evil",
+    9: "Chaotic Evil",
+}
+
 
 class DndBeyondError(Exception):
     """Raised with a message that's safe to show directly to the user."""
@@ -104,6 +119,30 @@ def _classes_summary(data):
     return " / ".join(parts)
 
 
+def _primary_class_info(data):
+    """Pick the class D&D Beyond marked as the character's starting class
+    (falling back to the first one listed) to fill in the single Class /
+    Subclass fields our entry form has, and sum every class's level for a
+    multiclassed character's total Level. Returns (class_name, subclass_name,
+    total_level) — any of which may be "" / None if not present."""
+    classes = data.get("classes") or []
+    if not classes:
+        return "", "", None
+
+    total_level = 0
+    primary = None
+    for c in classes:
+        total_level += c.get("level") or 0
+        if c.get("isStartingClass") and primary is None:
+            primary = c
+    if primary is None:
+        primary = classes[0]
+
+    class_name = ((primary.get("definition") or {}).get("name") or "").strip()
+    subclass_name = ((primary.get("subclassDefinition") or {}).get("name") or "").strip()
+    return class_name, subclass_name, (total_level or None)
+
+
 def _stats_table(data):
     base = {s.get("id"): s.get("value") for s in (data.get("stats") or []) if s.get("value") is not None}
     bonus = {s.get("id"): s.get("value") for s in (data.get("bonusStats") or []) if s.get("value") is not None}
@@ -167,9 +206,39 @@ def build_entry_fields(data):
 
     avatar_url = (data.get("decorations") or {}).get("avatarUrl") or race.get("portraitAvatarUrl") or ""
 
+    char_class, subclass, level = _primary_class_info(data)
+    alignment = ALIGNMENT_BY_ID.get(data.get("alignmentId"), "")
+    player_name = (data.get("username") or "").strip()
+
+    # These map straight onto the Character category's DETAIL_FIELDS columns
+    # (see models.py) so the New Entry form comes up with Species/Class/
+    # Subclass/Level/Alignment/Background/Player Name already filled in
+    # instead of just a name and a paragraph of prose. Any value here that
+    # isn't one of the form's standard dropdown options (a less common race,
+    # an unusual background, a class like Artificer that isn't in the core
+    # twelve) still comes through as free text — the entry form's "+ Add new
+    # option..." mechanism registers it as a real dropdown option the moment
+    # the entry is saved, so it's not lost or forced into "Other".
+    details = {
+        "species": race_name or None,
+        "char_class": char_class or None,
+        "subclass": subclass or None,
+        "level": level,
+        "alignment": alignment or None,
+        "background": background_name or None,
+        # D&D Beyond doesn't expose a clean "is this character dead" flag we
+        # can trust, and a sheet being importable at all means it's an active
+        # PC, so "Alive" / party-member are safe, easily-overridden defaults
+        # rather than guesses about data that isn't really there.
+        "character_status": "Alive",
+        "is_player_character": "Yes",
+        "player_name": player_name or None,
+    }
+
     return {
         "name": name,
         "summary": summary,
         "content": "\n\n".join(content_parts),
         "avatar_url": avatar_url,
+        "details": details,
     }
