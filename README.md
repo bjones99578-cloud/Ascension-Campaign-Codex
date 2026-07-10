@@ -54,6 +54,12 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   These fields only appear on the form once you've picked the matching
   category, and most are dropdowns of standard 5e-style options (with an
   "Other" choice for homebrew) so entries stay consistent across the party.
+- **Adding your own dropdown options**: any of those dropdowns can be
+  extended on the spot — pick "+ Add new option…" at the bottom of the list,
+  type your own text (a homebrew class, a custom settlement size, whatever
+  doesn't fit the standard list), and save the entry. That value is saved
+  permanently, so it shows up as a normal option in that same dropdown for
+  every entry and every player from then on — no editing code, no restart.
 - **City View**: the "City View" link in the nav is a one-page watchboard for
   running a session — pick a city from the dropdown and see its Region,
   Settlement Size, Government, and Population, its write-up, and live tables

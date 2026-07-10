@@ -60,10 +60,16 @@ def parse_detail_fields(form):
     """Read the typical D&D detail fields (Species, Class, Alignment, Population,
     etc.) out of a submitted form, keyed by their DB column name. Numeric columns
     are converted to int (or None if blank/invalid); everything else is stripped
-    text (or None if blank)."""
+    text (or None if blank). "__add_new__" is the entry form's sentinel value for
+    a select whose "+ Add new option..." control was picked -- normally client-side
+    JS swaps it out for the typed-in text before submit, but if that never ran
+    (JS disabled) treat it the same as blank rather than saving the literal sentinel.
+    """
     details = {}
     for col in models.DETAIL_COLUMNS:
         raw = (form.get(col) or "").strip()
+        if raw == "__add_new__":
+            raw = ""
         if col in models.DETAIL_INT_COLUMNS:
             try:
                 details[col] = int(raw) if raw else None
@@ -72,6 +78,15 @@ def parse_detail_fields(form):
         else:
             details[col] = raw or None
     return details
+
+
+def _persist_custom_options(conn, details):
+    """Any select-field value in a saved entry that isn't one of the built-in
+    options gets saved as a new custom option (see models.add_custom_option),
+    so typing "Beastmaster" into the Class field once means every future
+    Character entry can just pick "Beastmaster" from the dropdown."""
+    for field_name, value in details.items():
+        models.add_custom_option(conn, field_name, value)
 
 
 @app.teardown_appcontext
@@ -89,7 +104,7 @@ def inject_globals():
         "category_plurals": models.CATEGORY_PLURALS,
         "category_counts": models.category_counts(conn),
         "current_author": session.get("display_name", ""),
-        "detail_fields": models.DETAIL_FIELDS,
+        "detail_fields": models.merged_detail_fields(conn),
     }
 
 
@@ -218,6 +233,7 @@ def new_entry():
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         pc_slot = _parse_pc_slot(conn, request.form)
         details = parse_detail_fields(request.form)
+        _persist_custom_options(conn, details)
         error = None
         if not name:
             error = "Please give this entry a name."
@@ -366,6 +382,7 @@ def edit_entry(entry_id):
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         pc_slot = _parse_pc_slot(conn, request.form, ignore_entry_id=entry_id)
         details = parse_detail_fields(request.form)
+        _persist_custom_options(conn, details)
         error = None
         if not name:
             error = "Please give this entry a name."

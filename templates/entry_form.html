@@ -42,12 +42,15 @@
         <label>
           {{ f.label }}
           {% if f.type == "select" %}
-            <select name="{{ f.name }}">
+            <select name="{{ f.name }}" class="option-select">
               <option value="">— None —</option>
               {% for opt in f.options %}
                 <option value="{{ opt }}" {% if form.get(f.name) == opt %}selected{% endif %}>{{ opt }}</option>
               {% endfor %}
+              <option value="__add_new__">+ Add new option…</option>
             </select>
+            <input type="text" class="custom-option-input" style="display:none"
+                   placeholder="Type a new {{ f.label.lower() }}, then save the entry to add it">
           {% elif f.type == "number" %}
             <input type="number" name="{{ f.name }}"
                    value="{{ form.get(f.name) if form.get(f.name) is not none else '' }}"
@@ -170,11 +173,53 @@
     function updateVisibility() {
       var cat = categorySelect.value;
       groups.forEach(function (group) {
-        group.style.display = (group.dataset.showFor === cat) ? "" : "none";
+        var active = (group.dataset.showFor === cat);
+        group.style.display = active ? "" : "none";
+        // A few field names (e.g. "alignment") are shared by more than one
+        // category's field-group, so more than one <select>/<input> with that
+        // same name exists in the DOM at once. Disabling the ones in hidden
+        // groups keeps them out of the submitted form entirely, so only the
+        // currently-visible category's values are ever sent.
+        group.querySelectorAll("input, select, textarea").forEach(function (field) {
+          field.disabled = !active;
+        });
       });
     }
     categorySelect.addEventListener("change", updateVisibility);
     updateVisibility();
+  })();
+
+  (function () {
+    var form = document.querySelector(".entry-form");
+    document.querySelectorAll("select.option-select").forEach(function (select) {
+      var input = select.nextElementSibling;
+      if (!input || !input.classList.contains("custom-option-input")) return;
+      function sync() {
+        var showInput = select.value === "__add_new__";
+        input.style.display = showInput ? "" : "none";
+        if (showInput) input.focus();
+      }
+      select.addEventListener("change", sync);
+    });
+
+    form.addEventListener("submit", function () {
+      document.querySelectorAll("select.option-select").forEach(function (select) {
+        var input = select.nextElementSibling;
+        if (!input || !input.classList.contains("custom-option-input")) return;
+        if (select.value !== "__add_new__") return;
+        var value = input.value.trim();
+        if (value) {
+          var opt = document.createElement("option");
+          opt.value = value;
+          opt.textContent = value;
+          opt.selected = true;
+          select.appendChild(opt);
+          select.value = value;
+        } else {
+          select.value = "";
+        }
+      });
+    });
   })();
 </script>
 {% endblock %}

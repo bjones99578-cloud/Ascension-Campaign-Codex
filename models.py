@@ -193,10 +193,73 @@ DETAIL_COLUMNS = sorted({f["name"] for fields in DETAIL_FIELDS.values() for f in
 # Columns that store a number rather than text.
 DETAIL_INT_COLUMNS = {"level", "population"}
 
+# field name -> its built-in option list, used to tell a genuinely new custom
+# value apart from one that just matches a built-in option under different
+# capitalization (see add_custom_option).
+OPTIONS_BY_FIELD = {
+    f["name"]: f["options"]
+    for fields in DETAIL_FIELDS.values() for f in fields if f["type"] == "select"
+}
+
 
 def empty_details():
     """A details dict with every column set to None, for a brand-new entry."""
     return {col: None for col in DETAIL_COLUMNS}
+
+
+def merged_detail_fields(conn):
+    """DETAIL_FIELDS, but with every select field's options extended by any
+    custom values the party has typed in via the "+ Add new option..." control
+    on the entry form (see add_custom_option). Built fresh per request instead
+    of mutating the module-level DETAIL_FIELDS, so it always reflects the
+    current contents of the custom_option table."""
+    custom_by_field = {}
+    for row in conn.execute(
+        "SELECT field_name, value FROM custom_option ORDER BY value COLLATE NOCASE ASC"
+    ):
+        custom_by_field.setdefault(row["field_name"], []).append(row["value"])
+
+    merged = {}
+    for category, fields in DETAIL_FIELDS.items():
+        new_fields = []
+        for f in fields:
+            if f["type"] == "select":
+                customs = custom_by_field.get(f["name"], [])
+                if customs:
+                    base = list(f["options"])
+                    # Slot new custom options in just before a trailing "Other"
+                    # catch-all (if there is one) so "Other/Homebrew" still
+                    # reads as the last resort, rather than after it.
+                    if base and base[-1].strip().lower().startswith("other"):
+                        options = base[:-1] + customs + [base[-1]]
+                    else:
+                        options = base + customs
+                    f = {**f, "options": options}
+            new_fields.append(f)
+        merged[category] = new_fields
+    return merged
+
+
+def add_custom_option(conn, field_name, value):
+    """Persist a free-typed dropdown value (from the "+ Add new option..."
+    control on a select-type detail field) so it becomes a real option in
+    everyone's dropdown from now on. No-ops for blank values, for fields that
+    aren't a known select-type detail field, and for values that already
+    match a built-in option (case-insensitively) -- the custom_option table's
+    UNIQUE constraint also guards against re-adding a value that was already
+    added as a custom option before."""
+    if field_name not in OPTIONS_BY_FIELD:
+        return  # not a select-type detail field (e.g. a number column like level/population)
+    value = (value or "").strip()
+    if not value:
+        return
+    if any(value.lower() == opt.lower() for opt in OPTIONS_BY_FIELD[field_name]):
+        return
+    conn.execute(
+        "INSERT OR IGNORE INTO custom_option (field_name, value, created_at) VALUES (?, ?, ?)",
+        (field_name, value, now_iso()),
+    )
+    conn.commit()
 
 
 def get_db():
@@ -247,9 +310,18 @@ def init_db():
             value TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS custom_option (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            field_name TEXT NOT NULL,
+            value TEXT NOT NULL COLLATE NOCASE,
+            created_at TEXT NOT NULL,
+            UNIQUE (field_name, value)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_link_source ON link (source_id);
         CREATE INDEX IF NOT EXISTS idx_link_target ON link (target_id);
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
+        CREATE INDEX IF NOT EXISTS idx_custom_option_field ON custom_option (field_name);
         """
     )
     # Lightweight migrations for databases created before these columns existed.
