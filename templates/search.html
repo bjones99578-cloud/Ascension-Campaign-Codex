@@ -50,7 +50,7 @@
     {% for entry in results %}
       <li class="cat-{{ entry['category'].lower() }}">
         {% if entry['image_filename'] %}
-          <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+          <img class="entry-thumb" src="{{ url_for('uploaded_file', filename=entry['image_filename']) }}" alt="">
         {% endif %}
         <div>
           <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>

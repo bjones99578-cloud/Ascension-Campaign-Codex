@@ -166,6 +166,14 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   name" field on each entry so people can see who wrote or last touched it.
 - **Pictures**: any entry can have an image attached (a character portrait,
   city art, an item illustration) — add one when creating or editing an entry.
+  Every upload is automatically downscaled (to 2048px on its longest edge)
+  and recompressed on the way in, so a multi-MB phone photo becomes a few
+  hundred KB with no visible quality loss in how the app actually displays
+  it — this stretches however much disk space your hosting plan gives you
+  much further as the party uploads images over a campaign's lifetime.
+  Animated GIFs are left untouched (resizing would flatten the animation),
+  and anything with real transparency is kept as a PNG; everything else is
+  saved as JPEG for a smaller file size.
 - **World Map (multiple maps)**: the "Map" link in the nav holds as many maps
   as the party needs — a World Map, a city street-map, a dungeon layout,
   whatever scale is useful — each with its own image and its own independent
@@ -283,7 +291,29 @@ This app is a small, always-on server with a local database file, so it's a
 good fit for a traditional free host (not Vercel/Netlify — those are
 serverless and don't keep a persistent SQLite file between requests).
 
-### Option A: Render.com (recommended, free, ~5 minutes)
+### ⚠️ Important: free-tier Render loses your data, not just on redeploy
+
+If you're already running on Render's **free** Web Service tier: that tier has
+**no persistent disk at all**. Its filesystem — which is where `wiki.db` and
+`static/uploads/` both live by default — resets every time the service
+redeploys, restarts, **or spins down from 15 minutes of inactivity**. Spin-down
+happens automatically and constantly for a small home game (any time nobody's
+looked at the site for a quarter of an hour), so this isn't a rare edge case —
+it's the normal, expected behavior of that tier. If someone added a map or a
+character and it was gone next time you opened the site, this is almost
+certainly why, and nothing was misconfigured or broken in the app itself.
+
+There's no way to make the free tier keep data reliably. Pick Option A below
+(paid Render + a Disk) or Option B (PythonAnywhere, still free) if your
+campaign's data needs to actually stick around.
+
+### Option A: Render.com with a persistent Disk (paid, keeps data reliably)
+
+Persistent Disks on Render require a **paid** plan — the free tier can't
+attach one at all (see the warning above). As of this writing, the cheapest
+path is the Starter instance plan (~$7/month) plus a small Disk (~$0.25/GB/month;
+1 GB is overkill for this app). Render's pricing changes over time, so check
+https://render.com/pricing for current numbers before committing.
 
 1. Push this folder to a new GitHub repo (Render deploys from GitHub).
 2. Go to https://render.com → New → Web Service → connect your repo.
@@ -291,44 +321,151 @@ serverless and don't keep a persistent SQLite file between requests).
    - Runtime: Python 3
    - Build command: `pip install -r requirements.txt`
    - Start command: `gunicorn app:app`
-4. Add an environment variable `SECRET_KEY` set to any random string.
-5. Deploy. Render gives you a URL like `https://your-app.onrender.com` — share
+   - Instance type: **Starter** (or higher) — Disks aren't available on Free.
+4. Add environment variables:
+   - `SECRET_KEY` set to any random string.
+   - `DB_PATH` set to `/var/data/wiki.db`
+   - `UPLOAD_DIR` set to `/var/data/uploads`
+5. Add a **Disk** (in the service's Settings → Disks tab): mount path
+   `/var/data`, 1 GB is plenty. This is the actual fix — everything under that
+   mount path survives redeploys, restarts, and spin-downs; everything outside
+   it (the rest of the app's code checkout) still resets each time, which is
+   fine since only `wiki.db` and uploaded images need to persist.
+6. Deploy. Render gives you a URL like `https://your-app.onrender.com` — share
    that with your party.
 
-Render's free tier spins the service down after inactivity (it wakes back up
-in a few seconds when someone visits), and the filesystem is wiped on
-redeploy — so treat `wiki.db` as safe for regular play, but avoid redeploying
-once your party's data matters, or upgrade to a paid instance with a
-persistent disk if you want redeploys to be safe too.
+The app reads `DB_PATH`/`UPLOAD_DIR` from the environment (falling back to the
+old local defaults, `wiki.db` and `static/uploads/`, if you don't set them —
+so running it locally for testing needs no changes at all). Uploaded images
+are served through the app's own `/uploads/<filename>` route rather than
+Flask's built-in static file serving, since a mounted Disk normally lives
+outside the app's static folder.
+
+If you're migrating an existing Render free-tier deployment: its current data
+is already gone per the warning above, so this is effectively a fresh start —
+the first boot with the new Disk creates an empty `wiki.db` at `/var/data`,
+same as a brand-new install.
 
 ### Option B: PythonAnywhere (free, persistent disk, no redeploy risk)
 
+Unlike Render, PythonAnywhere's free tier disk isn't ephemeral at all, so
+`wiki.db` and `static/uploads/` persist permanently with no environment
+variables to configure — the app's existing local-path defaults are already
+correct here.
+
+Free-tier trade-offs worth knowing up front: 512 MB of disk (plenty for a
+years-long campaign's text and photos), 100 CPU-seconds/day (fine for a
+handful of people browsing between sessions), no custom domain (you get
+`yourusername.pythonanywhere.com`), and — this changed recently — a free web
+app goes dormant after **1 month with zero traffic**. That's an availability
+hiccup, not data loss: `wiki.db` and every uploaded image stay exactly as they
+are on disk the whole time, the web app just stops answering requests until
+you log in and click "Reload" on the Web tab. Put a recurring monthly
+reminder on your calendar if your group sometimes goes quiet for a while.
+
 1. Create a free account at https://www.pythonanywhere.com.
-2. Upload this project folder (Files tab, or clone via git from the Bash
-   console they provide).
-3. Web tab → Add a new web app → Flask → point it at `app.py`.
-4. In the WSGI config file it generates, make sure it imports `app` from this
-   project's `app.py`.
-5. Reload the web app. Your site is live at `yourusername.pythonanywhere.com`,
-   and the SQLite file persists on disk permanently (no spin-down, no wipe).
+2. Open a **Bash console** (Consoles tab → Bash) and clone your repo:
+   ```bash
+   git clone https://github.com/bjones99578-cloud/Ascension-Campaign-Codex.git mysite
+   cd mysite
+   ```
+3. Still in that console, create a virtualenv and install dependencies:
+   ```bash
+   mkvirtualenv --python=/usr/bin/python3.13 codex-env
+   pip install -r requirements.txt
+   ```
+   (If `mkvirtualenv` isn't found, open a fresh console — it's added to your
+   shell's PATH on first login.)
+4. Go to the **Web tab** → "Add a new web app" → **Manual configuration**
+   (not the "Flask" quick-start option, since this app already has its own
+   `app.py`) → pick the same Python version as your virtualenv.
+5. In that same Web tab page, set **Virtualenv** to `codex-env` (it expands
+   to the full path automatically), then click the WSGI configuration file
+   link near the top of the page and replace its contents with:
+   ```python
+   import os
+   import sys
 
-### Option C: Fly.io / Railway
+   path = '/home/yourusername/mysite'
+   if path not in sys.path:
+       sys.path.insert(0, path)
 
-Both work well too if you're comfortable with a CLI and want a custom domain
-or a persistent volume for `wiki.db`. The app is a standard Flask + gunicorn
-app, so their default Python/Flask guides apply directly — just make sure
-whichever one you pick gives `wiki.db` a persistent volume/disk, not just
-ephemeral container storage.
+   os.environ['SECRET_KEY'] = 'put-any-random-string-here'
+
+   from app import app as application
+   ```
+   Replace `yourusername` with your actual PythonAnywhere username, and the
+   `SECRET_KEY` value with any random string of your own — this file lives
+   only in your PythonAnywhere account, not in the public GitHub repo, so it's
+   a safe place to put it.
+6. Click the big green **Reload** button at the top of the Web tab. Your site
+   is live at `https://yourusername.pythonanywhere.com` — share that with
+   your party.
+
+To pull in future updates you push to GitHub: open a Bash console, `cd
+mysite && git pull`, then hit **Reload** on the Web tab again.
+
+### Option C: Fly.io / Railway (cheaper paid alternatives to Render)
+
+Both beat Render Starter+Disk on price if PythonAnywhere's free-tier
+trade-offs (CPU quota, no custom domain, monthly reload) don't work for you.
+Neither has a real free tier anymore, but both are cheap:
+
+- **Fly.io**: roughly **$2/month** total for the smallest always-on VM
+  (shared-cpu-1x, 256 MB) plus a 1 GB persistent volume. No dashboard —
+  you'll install the `flyctl` CLI and run `fly launch` / `fly volumes create`
+  from a terminal, so this suits you if you're comfortable with a few CLI
+  commands during setup.
+- **Railway**: **$5/month** (Hobby plan), dashboard-based and GitHub-connected
+  like Render, with persistent volumes supported directly in the UI.
+
+Either way, the app is a standard Flask + gunicorn app, so their default
+Python/Flask deployment guides apply directly — set `DB_PATH` and
+`UPLOAD_DIR` to paths inside whichever persistent volume you attach, the same
+way Option A does for Render. Check each provider's current pricing page
+before committing, since these numbers change over time.
 
 ## Backing up your world
 
-`wiki.db` holds all your text entries, and `static/uploads/` holds every
-picture and the world map. Copy both anywhere to back up your whole codex, or
-to move it between hosts.
+`wiki.db` holds all your text entries, and your uploads folder (wherever
+`UPLOAD_DIR` points — `static/uploads/` by default, or your mounted Disk's
+`uploads` subfolder in production) holds every picture and the world map.
+Copy both anywhere to back up your whole codex, or to move it between hosts.
 
-## A note on the free-tier hosts and uploaded images
+`wiki.db` runs in SQLite's WAL mode (see `models.get_db()`), which means
+recent writes can briefly live in a companion `wiki.db-wal` file rather than
+`wiki.db` itself. **Don't just copy `wiki.db` by hand while the app is
+running** — that can miss those recent writes or grab an inconsistent
+snapshot. Either stop the app first for a manual copy, or use `backup.py`
+below, which reads through SQLite's own backup API and always gets a
+complete, consistent copy no matter what's happening to the live database at
+that moment.
 
-On Render's free tier specifically, both `wiki.db` and anything in
-`static/uploads/` live on the same ephemeral disk — a redeploy wipes both
-together. PythonAnywhere's free tier keeps both permanently since its disk
-isn't ephemeral. Same trade-off as before, just now it covers images too.
+### Automated daily backups (`backup.py`)
+
+This is a different safety net than the persistent-disk setup earlier in
+this doc: a disk that never gets wiped still won't protect you from an
+accidental bad edit, an app bug, or a corrupted file. Running `backup.py` on
+a schedule keeps a rolling set of timestamped snapshots (`backups/wiki-
+<timestamp>.db`), auto-deleting anything older than 30 days so this never
+grows without bound on its own.
+
+**On PythonAnywhere:** Tasks tab → "Create a scheduled task" → pick a daily
+time → command:
+```bash
+/home/yourusername/.virtualenvs/codex-env/bin/python /home/yourusername/mysite/backup.py
+```
+(Use the full path to your virtualenv's own `python`, not a bare `python3` —
+scheduled tasks don't activate a virtualenv the way an interactive console
+does.) Check the task's run log after the first firing to confirm it printed
+a "Backed up..." line rather than an error.
+
+**Anywhere else** (a plain server, a paid Render instance, etc.): a cron
+entry works the same way, e.g. `0 6 * * * cd /path/to/app && ./venv/bin/python backup.py`
+for a daily 6 AM run.
+
+Either way, `backups/` living on the same disk as `wiki.db` protects you from
+app-level mistakes, but not from that entire disk or account disappearing.
+For real off-site safety, periodically download the `backups/` folder
+somewhere else — your own computer, a cloud drive, wherever — rather than
+trusting it to just sit next to the thing it's backing up.

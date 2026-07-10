@@ -174,7 +174,7 @@
 
   <div class="map-page-wrap" id="mapWrap">
     <div class="map-inner" id="mapInner">
-      <img id="mapImage" style="width: 100%;" src="{{ url_for('static', filename='uploads/' ~ current_map['filename']) }}" alt="{{ current_map['name'] }}">
+      <img id="mapImage" style="width: 100%;" src="{{ url_for('uploaded_file', filename=current_map['filename']) }}" alt="{{ current_map['name'] }}">
       <div class="map-pins cat-city" id="mapPins">
         {% for pin in pins %}
           {% set undiscovered_class = "map-pin-undiscovered" if not pin.discovered else "" %}

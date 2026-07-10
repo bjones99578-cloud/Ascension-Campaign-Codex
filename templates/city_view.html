@@ -30,7 +30,7 @@
     <div class="related-block">
       <h2>City Info</h2>
       {% if selected_city['image_filename'] %}
-        <img class="entry-portrait" src="{{ url_for('static', filename='uploads/' ~ selected_city['image_filename']) }}" alt="{{ selected_city['name'] }}">
+        <img class="entry-portrait" src="{{ url_for('uploaded_file', filename=selected_city['image_filename']) }}" alt="{{ selected_city['name'] }}">
       {% endif %}
       <table class="related-table">
         <tbody>

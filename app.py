@@ -1,7 +1,8 @@
 import os
 import re
 
-from flask import Flask, g, redirect, render_template, request, session, url_for
+from flask import Flask, g, redirect, render_template, request, send_from_directory, session, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
 
 import dndbeyond
 import images
@@ -10,7 +11,43 @@ from rendering import render_wiki_content
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
-app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB per upload, plenty for a photo
+# 20 MB covers even a large modern phone photo. This is just a sanity cap on
+# the raw upload, not the stored file size -- images.py compresses and
+# downscales every image after it's received, so a bigger raw upload here
+# doesn't cost extra disk space long-term, it just avoids rejecting a
+# legitimate high-res photo for no real benefit.
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_upload_too_large(e):
+    """Without this, a too-large upload crashes with Flask's generic,
+    unstyled 413 error page -- Werkzeug rejects the request before any view
+    function (or its usual error-message handling) ever runs, so there's no
+    way to redisplay the entry form with the name/summary/content the
+    person already typed still filled in. The friendliest honest option is
+    a clear explanation and a nudge to go back (most browsers restore
+    what was typed via the back button) rather than a technical crash."""
+    max_mb = app.config["MAX_CONTENT_LENGTH"] // (1024 * 1024)
+    return render_template(
+        "simple_message.html",
+        title="That image is too large",
+        message=(
+            f"Uploads are limited to {max_mb} MB. Use your browser's Back "
+            "button, pick a smaller image (or let your phone's camera app "
+            "compress it first), and try again."
+        ),
+    ), 413
+
+
+@app.route("/uploads/<path:filename>")
+def uploaded_file(filename):
+    """Serves every uploaded portrait/city-art/map image from images.UPLOAD_DIR.
+    Deliberately separate from Flask's built-in /static route, which only ever
+    serves files sitting inside this app's own code folder -- when UPLOAD_DIR
+    is pointed at a mounted persistent disk (see images.py), that directory
+    lives outside the code folder entirely, so /static can't reach it."""
+    return send_from_directory(images.UPLOAD_DIR, filename)
 
 
 def get_conn():

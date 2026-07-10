@@ -228,7 +228,7 @@
   {% endif %}
 
   {% if entry['image_filename'] %}
-    <img class="entry-portrait" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="{{ entry['name'] }}">
+    <img class="entry-portrait" src="{{ url_for('uploaded_file', filename=entry['image_filename']) }}" alt="{{ entry['name'] }}">
   {% endif %}
 
   <div class="entry-body">

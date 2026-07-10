@@ -8,7 +8,7 @@
 
 {% if preview_map and preview_map['filename'] %}
   <a class="map-preview" href="{{ url_for('map_view', map_id=preview_map['id']) }}">
-    <img src="{{ url_for('static', filename='uploads/' ~ preview_map['filename']) }}" alt="{{ preview_map['name'] }}">
+    <img src="{{ url_for('uploaded_file', filename=preview_map['filename']) }}" alt="{{ preview_map['name'] }}">
     <span class="map-preview-label">🗺 View {{ preview_map['name'] }}</span>
   </a>
 {% else %}
@@ -36,7 +36,7 @@
       {% for entry in recent %}
         <li class="cat-{{ entry['category'].lower() }}">
           {% if entry['image_filename'] %}
-            <img class="entry-thumb" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="">
+            <img class="entry-thumb" src="{{ url_for('uploaded_file', filename=entry['image_filename']) }}" alt="">
           {% endif %}
           <div>
             <a href="{{ url_for('entry_detail', entry_id=entry['id']) }}">{{ entry['name'] }}</a>

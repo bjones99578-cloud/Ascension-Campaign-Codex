@@ -1,8 +1,15 @@
+import os
 import re
 import sqlite3
 from datetime import datetime, timezone
 
-DB_PATH = "wiki.db"
+# Overridable via the DB_PATH environment variable so a deployment with a
+# persistent disk (e.g. Render's paid Starter plan + a mounted Disk) can
+# point this at a path inside that disk instead of the app's own ephemeral
+# code directory -- otherwise every redeploy/restart/spin-down silently
+# resets the whole campaign to a fresh, empty database. Defaults to the
+# original relative path for local/dev use, where that risk doesn't apply.
+DB_PATH = os.environ.get("DB_PATH", "wiki.db")
 
 CATEGORIES = [
     "Region",
@@ -331,6 +338,19 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # WAL mode lets readers and writers work concurrently instead of
+    # blocking each other outright -- without it, a hosting plan that serves
+    # requests across multiple worker processes (as PythonAnywhere's paid
+    # tiers and Render both do) can throw a raw "database is locked" error
+    # to the browser the moment two people save something at nearly the same
+    # instant. busy_timeout gives any write that does collide a few seconds
+    # to wait its turn and retry automatically rather than failing right
+    # away. This is a one-time property of the database file itself (SQLite
+    # remembers it), so re-issuing it on every connection is just a cheap
+    # no-op after the first time.
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.execute("PRAGMA synchronous = NORMAL")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 

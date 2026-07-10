@@ -203,7 +203,7 @@
     Picture <span class="hint">(portrait, art, a photo — optional)</span>
     {% if form.image_filename %}
       <div class="current-image">
-        <img src="{{ url_for('static', filename='uploads/' ~ form.image_filename) }}" alt="">
+        <img src="{{ url_for('uploaded_file', filename=form.image_filename) }}" alt="">
         <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
           <input type="checkbox" name="remove_image" value="1" style="width: auto;">
           Remove this image

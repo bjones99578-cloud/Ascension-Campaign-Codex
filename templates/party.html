@@ -20,7 +20,7 @@
         {% set c = card.character %}
         <div class="roster-slot-num">Slot {{ card.slot }}</div>
         {% if c['image_filename'] %}
-          <img class="roster-portrait" src="{{ url_for('static', filename='uploads/' ~ c['image_filename']) }}" alt="{{ c['name'] }}">
+          <img class="roster-portrait" src="{{ url_for('uploaded_file', filename=c['image_filename']) }}" alt="{{ c['name'] }}">
         {% else %}
           <img class="roster-portrait roster-portrait-placeholder" src="{{ url_for('static', filename='icons/character.svg') }}" alt="">
         {% endif %}
