@@ -46,6 +46,23 @@
     <span>Last updated {{ entry['updated_at'][:10] }}</span>
   </div>
 
+  {% if related_entities %}
+    <div class="entry-relations">
+      {% if related_entities.home_city %}
+        <span><span class="relation-label">Home City:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.home_city['id']) }}">{{ related_entities.home_city['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.organization %}
+        <span><span class="relation-label">Organization:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.organization['id']) }}">{{ related_entities.organization['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.region %}
+        <span><span class="relation-label">Region:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.region['id']) }}">{{ related_entities.region['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.headquarters_city %}
+        <span><span class="relation-label">Headquartered in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.headquarters_city['id']) }}">{{ related_entities.headquarters_city['name'] }}</a></span>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {% if entry['image_filename'] %}
     <img class="entry-portrait" src="{{ url_for('static', filename='uploads/' ~ entry['image_filename']) }}" alt="{{ entry['name'] }}">
   {% endif %}
@@ -57,12 +74,20 @@
   {% if related %}
     <div class="divider"><span class="divider-mark"></span></div>
 
-    {{ related_table("Characters", related.characters,
-        "No characters yet — add [[" ~ entry['name'] ~ "]] to a character's entry to list them here.") }}
-    {{ related_table("Notable Factions", related.factions,
-        "No organizations yet — add [[" ~ entry['name'] ~ "]] to an organization's entry to list it here.") }}
-    {{ related_table("Missions & Quests", related.quests,
-        "No quests yet — add [[" ~ entry['name'] ~ "]] to a quest's entry to list it here.") }}
+    {% if related.characters is defined %}
+      {{ related_table("Characters", related.characters,
+          "No characters yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Home City, to list them here.") }}
+      {{ related_table("Notable Factions", related.factions,
+          "No organizations yet — add [[" ~ entry['name'] ~ "]] to an organization's entry, or set it as their Headquarters City, to list it here.") }}
+      {{ related_table("Missions & Quests", related.quests,
+          "No quests yet — add [[" ~ entry['name'] ~ "]] to a quest's entry to list it here.") }}
+    {% elif related.members is defined %}
+      {{ related_table("Members", related.members,
+          "No members yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
+    {% elif related.cities is defined %}
+      {{ related_table("Cities in this Region", related.cities,
+          "No cities yet — add [[" ~ entry['name'] ~ "]] to a city's entry, or set it as their Region, to list it here.") }}
+    {% endif %}
   {% endif %}
 
   {% if not related or backlinks %}

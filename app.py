@@ -18,6 +18,21 @@ def get_conn():
     return g.db
 
 
+def relationship_options(conn):
+    """Option lists for the Home City / Organization / Region / Headquarters
+    City dropdowns on the entry form."""
+    return {
+        "city_options": models.list_entries(conn, category="City"),
+        "organization_options": models.list_entries(conn, category="Organization"),
+        "region_options": models.list_entries(conn, category="Region"),
+    }
+
+
+def _parse_relationship_id(value):
+    """Convert a <select> value (empty string or a numeric id) to int or None."""
+    return int(value) if value else None
+
+
 @app.teardown_appcontext
 def close_conn(exception=None):
     db = g.pop("db", None)
@@ -76,19 +91,55 @@ def entry_detail(entry_id):
     backlinks = all_backlinks
     if entry["category"] == "City":
         # Cities get their linked Characters, Organizations, and Quests broken
-        # out into their own tables — populated automatically as other entries
-        # link back to this city with [[City Name]]. Anything else that links
-        # here (a Location, an Item, another City) still shows up below as a
+        # out into their own tables — populated both from the explicit Home
+        # City / Headquarters City dropdowns and from [[City Name]] wiki-link
+        # backlinks, merged and de-duplicated. Anything else that links here
+        # (a Location, an Item, another City) still shows up below as a
         # general backlink so nothing gets lost.
         related = {
-            "characters": [b for b in all_backlinks if b["category"] == "Character"],
-            "factions": [b for b in all_backlinks if b["category"] == "Organization"],
+            "characters": models.merge_by_id(
+                models.get_characters_in_city(conn, entry_id),
+                [b for b in all_backlinks if b["category"] == "Character"],
+            ),
+            "factions": models.merge_by_id(
+                models.get_organizations_in_city(conn, entry_id),
+                [b for b in all_backlinks if b["category"] == "Organization"],
+            ),
             "quests": [b for b in all_backlinks if b["category"] == "Quest"],
         }
         backlinks = [
             b for b in all_backlinks
             if b["category"] not in ("Character", "Organization", "Quest")
         ]
+    elif entry["category"] == "Organization":
+        related = {
+            "members": models.merge_by_id(
+                models.get_characters_in_organization(conn, entry_id),
+                [b for b in all_backlinks if b["category"] == "Character"],
+            ),
+        }
+        backlinks = [b for b in all_backlinks if b["category"] != "Character"]
+    elif entry["category"] == "Region":
+        related = {
+            "cities": models.merge_by_id(
+                models.get_cities_in_region(conn, entry_id),
+                [b for b in all_backlinks if b["category"] == "City"],
+            ),
+        }
+        backlinks = [b for b in all_backlinks if b["category"] != "City"]
+
+    related_entities = {}
+    if entry["category"] == "Character":
+        if entry["home_city_id"]:
+            related_entities["home_city"] = models.get_entry(conn, entry["home_city_id"])
+        if entry["organization_id"]:
+            related_entities["organization"] = models.get_entry(conn, entry["organization_id"])
+    elif entry["category"] == "City":
+        if entry["region_id"]:
+            related_entities["region"] = models.get_entry(conn, entry["region_id"])
+    elif entry["category"] == "Organization":
+        if entry["headquarters_city_id"]:
+            related_entities["headquarters_city"] = models.get_entry(conn, entry["headquarters_city_id"])
 
     return render_template(
         "entry_detail.html",
@@ -96,6 +147,7 @@ def entry_detail(entry_id):
         rendered=rendered,
         backlinks=backlinks,
         related=related,
+        related_entities=related_entities,
     )
 
 
@@ -112,6 +164,10 @@ def new_entry():
         # carried forward an image before this entry existed in the database.
         existing_image_filename = request.form.get("existing_image_filename") or None
         remove_image = request.form.get("remove_image") == "1"
+        home_city_id = _parse_relationship_id(request.form.get("home_city"))
+        organization_id = _parse_relationship_id(request.form.get("organization"))
+        region_id = _parse_relationship_id(request.form.get("region"))
+        headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         error = None
         if not name:
             error = "Please give this entry a name."
@@ -129,7 +185,12 @@ def new_entry():
                     "content": content,
                     "author": author,
                     "image_filename": None if remove_image else existing_image_filename,
+                    "home_city_id": home_city_id,
+                    "organization_id": organization_id,
+                    "region_id": region_id,
+                    "headquarters_city_id": headquarters_city_id,
                 },
+                **relationship_options(conn),
             )
 
         new_image_filename = images.save_upload(request.files.get("image"))
@@ -146,7 +207,9 @@ def new_entry():
 
         session["display_name"] = author
         entry_id = models.create_entry(
-            conn, name, category, summary, content, author, image_filename
+            conn, name, category, summary, content, author, image_filename,
+            home_city_id=home_city_id, organization_id=organization_id,
+            region_id=region_id, headquarters_city_id=headquarters_city_id,
         )
         return redirect(url_for("entry_detail", entry_id=entry_id))
 
@@ -163,7 +226,12 @@ def new_entry():
             "content": "",
             "author": session.get("display_name", ""),
             "image_filename": None,
+            "home_city_id": None,
+            "organization_id": None,
+            "region_id": None,
+            "headquarters_city_id": None,
         },
+        **relationship_options(conn),
     )
 
 
@@ -196,7 +264,12 @@ def import_dndbeyond():
                         "content": fields["content"],
                         "author": session.get("display_name", ""),
                         "image_filename": image_filename,
+                        "home_city_id": None,
+                        "organization_id": None,
+                        "region_id": None,
+                        "headquarters_city_id": None,
                     },
+                    **relationship_options(get_conn()),
                 )
             except dndbeyond.DndBeyondError as exc:
                 error = str(exc)
@@ -217,6 +290,10 @@ def edit_entry(entry_id):
         content = request.form.get("content", "")
         author = request.form.get("author", "").strip()
         remove_image = request.form.get("remove_image") == "1"
+        home_city_id = _parse_relationship_id(request.form.get("home_city"))
+        organization_id = _parse_relationship_id(request.form.get("organization"))
+        region_id = _parse_relationship_id(request.form.get("region"))
+        headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         error = None
         if not name:
             error = "Please give this entry a name."
@@ -237,7 +314,12 @@ def edit_entry(entry_id):
                     "content": content,
                     "author": author,
                     "image_filename": entry["image_filename"],
+                    "home_city_id": home_city_id,
+                    "organization_id": organization_id,
+                    "region_id": region_id,
+                    "headquarters_city_id": headquarters_city_id,
                 },
+                **relationship_options(conn),
             )
         session["display_name"] = author
 
@@ -245,13 +327,25 @@ def edit_entry(entry_id):
         if new_image_filename:
             if entry["image_filename"]:
                 images.delete_upload(entry["image_filename"])
-            models.update_entry(conn, entry_id, name, category, summary, content, author, new_image_filename)
+            models.update_entry(
+                conn, entry_id, name, category, summary, content, author, new_image_filename,
+                home_city_id=home_city_id, organization_id=organization_id,
+                region_id=region_id, headquarters_city_id=headquarters_city_id,
+            )
         elif remove_image and entry["image_filename"]:
             images.delete_upload(entry["image_filename"])
             models.clear_entry_image(conn, entry_id)
-            models.update_entry(conn, entry_id, name, category, summary, content, author)
+            models.update_entry(
+                conn, entry_id, name, category, summary, content, author,
+                home_city_id=home_city_id, organization_id=organization_id,
+                region_id=region_id, headquarters_city_id=headquarters_city_id,
+            )
         else:
-            models.update_entry(conn, entry_id, name, category, summary, content, author)
+            models.update_entry(
+                conn, entry_id, name, category, summary, content, author,
+                home_city_id=home_city_id, organization_id=organization_id,
+                region_id=region_id, headquarters_city_id=headquarters_city_id,
+            )
 
         return redirect(url_for("entry_detail", entry_id=entry_id))
 
@@ -267,7 +361,12 @@ def edit_entry(entry_id):
             "content": entry["content"],
             "author": entry["author"] or session.get("display_name", ""),
             "image_filename": entry["image_filename"],
+            "home_city_id": entry["home_city_id"],
+            "organization_id": entry["organization_id"],
+            "region_id": entry["region_id"],
+            "headquarters_city_id": entry["headquarters_city_id"],
         },
+        **relationship_options(conn),
     )
 
 

@@ -26,12 +26,57 @@
 
   <label>
     Category
-    <select name="category">
+    <select name="category" id="category-select">
       {% for cat in categories %}
         <option value="{{ cat }}" {% if cat == form.category %}selected{% endif %}>{{ cat }}</option>
       {% endfor %}
     </select>
   </label>
+
+  <div class="field-group" data-show-for="Character">
+    <label>
+      Home City <span class="hint">(optional)</span>
+      <select name="home_city">
+        <option value="">— None —</option>
+        {% for city in city_options %}
+          <option value="{{ city['id'] }}" {% if form.home_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Organization <span class="hint">(optional)</span>
+      <select name="organization">
+        <option value="">— None —</option>
+        {% for org in organization_options %}
+          <option value="{{ org['id'] }}" {% if form.organization_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="field-group" data-show-for="City">
+    <label>
+      Region <span class="hint">(optional)</span>
+      <select name="region">
+        <option value="">— None —</option>
+        {% for region in region_options %}
+          <option value="{{ region['id'] }}" {% if form.region_id == region['id'] %}selected{% endif %}>{{ region['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="field-group" data-show-for="Organization">
+    <label>
+      Headquarters City <span class="hint">(optional)</span>
+      <select name="headquarters_city">
+        <option value="">— None —</option>
+        {% for city in city_options %}
+          <option value="{{ city['id'] }}" {% if form.headquarters_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
 
   <label>
     Short summary <span class="hint">(one line, shown in listings)</span>
@@ -71,4 +116,19 @@
     {% endif %}
   </div>
 </form>
+
+<script>
+  (function () {
+    var categorySelect = document.getElementById("category-select");
+    var groups = document.querySelectorAll(".field-group[data-show-for]");
+    function updateVisibility() {
+      var cat = categorySelect.value;
+      groups.forEach(function (group) {
+        group.style.display = (group.dataset.showFor === cat) ? "" : "none";
+      });
+    }
+    categorySelect.addEventListener("change", updateVisibility);
+    updateVisibility();
+  })();
+</script>
 {% endblock %}

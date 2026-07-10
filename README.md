@@ -1,8 +1,9 @@
 # Ascension Campaign Codex
 
-A tiny shared wiki for your D&D party: track cities, characters, organizations,
-locations, items, and quests, with wiki-style `[[links]]` between entries and
-automatic "what links here" backlinks — like a mini Wikipedia for your world.
+A tiny shared wiki for your D&D party: track regions, cities, characters,
+organizations, locations, items, and quests, with wiki-style `[[links]]`
+between entries and automatic "what links here" backlinks — like a mini
+Wikipedia for your world.
 
 Built with Flask + SQLite. No build step, no JavaScript framework, one database
 file.
@@ -26,8 +27,16 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
 
 ## How it works
 
-- **Categories**: City, Character, Organization, Location, Item, Quest. Browse
-  by category from the top nav, or use the search bar.
+- **Categories**: Region, City, Character, Organization, Location, Item,
+  Quest. Browse by category from the top nav, or use the search bar.
+- **Structured relationships**: alongside free-text `[[wiki links]]`, a few
+  entry types have explicit dropdown fields so the connection is guaranteed
+  to show up in the right table even if nobody remembers to write a link:
+  Characters can pick a **Home City** and an **Organization**, Cities can
+  pick a **Region**, and Organizations can pick a **Headquarters City**. Set
+  these when creating or editing an entry — the dropdown only appears once
+  you've picked the matching category. Entries linked either way (dropdown or
+  `[[wiki link]]`) show up together in the same table, de-duplicated.
 - **Wiki links**: in any entry's content, type `[[Entry Name]]` to link to
   another entry, or `[[Entry Name|custom display text]]`. If the target
   doesn't exist yet, the link shows up dashed/orange — click it to create
@@ -44,10 +53,12 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
 - **World Map**: the "Map" link in the nav holds a single shared map image
   (great for a hand-drawn world map) with zoom in/out controls and scrolling
   to pan around it. Uploading a new map there replaces it for everyone.
-- **City relationship tables**: every City entry automatically grows
-  Characters / Notable Factions / Missions & Quests tables as other entries
-  link to it with `[[City Name]]` — no manual linking step beyond writing the
-  `[[link]]` itself.
+- **Relationship tables**: every City entry automatically grows Characters /
+  Notable Factions / Missions & Quests tables (from the Home City /
+  Headquarters City dropdowns and from other entries linking to it with
+  `[[City Name]]`); every Organization entry grows a Members table; and every
+  Region entry grows a Cities in this Region table. No manual linking step
+  needed beyond picking the dropdown or writing the `[[link]]`.
 - **Import from D&D Beyond**: on the New Entry page, "Import from D&D Beyond"
   lets you paste a character's D&D Beyond URL (the character's sheet privacy
   must be set to Public) and pre-fill a new Character entry with their race,

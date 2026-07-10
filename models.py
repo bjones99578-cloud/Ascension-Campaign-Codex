@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 DB_PATH = "wiki.db"
 
 CATEGORIES = [
+    "Region",
     "City",
     "Character",
     "Organization",
@@ -14,6 +15,7 @@ CATEGORIES = [
 ]
 
 CATEGORY_PLURALS = {
+    "Region": "Regions",
     "City": "Cities",
     "Character": "Characters",
     "Organization": "Organizations",
@@ -23,6 +25,14 @@ CATEGORY_PLURALS = {
 }
 
 LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
+
+# Columns that hold an explicit, dropdown-selected relationship to another
+# entry (as opposed to relationships inferred from [[wiki links]] in prose).
+# Each is nullable and only meaningful for entries of a particular category:
+#   home_city_id, organization_id -> Character
+#   region_id                     -> City
+#   headquarters_city_id          -> Organization
+RELATIONSHIP_COLUMNS = ("home_city_id", "organization_id", "region_id", "headquarters_city_id")
 
 
 def get_db():
@@ -44,6 +54,10 @@ def init_db():
             content TEXT DEFAULT '',
             author TEXT DEFAULT '',
             image_filename TEXT,
+            home_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            organization_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            region_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            headquarters_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
@@ -67,10 +81,15 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
         """
     )
-    # Lightweight migration for databases created before image_filename existed.
+    # Lightweight migrations for databases created before these columns existed.
+    # SQLite can't add a FK constraint via ALTER TABLE, so migrated columns are
+    # plain nullable INTEGERs — that's fine, the app is the only thing writing
+    # to them and only ever with either a valid entry id or NULL.
     existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(entry)")}
-    if "image_filename" not in existing_cols:
-        conn.execute("ALTER TABLE entry ADD COLUMN image_filename TEXT")
+    for col in ("image_filename",) + RELATIONSHIP_COLUMNS:
+        if col not in existing_cols:
+            conn.execute(f"ALTER TABLE entry ADD COLUMN {col} INTEGER" if col != "image_filename"
+                         else "ALTER TABLE entry ADD COLUMN image_filename TEXT")
     conn.commit()
     conn.close()
 
@@ -125,6 +144,17 @@ def category_counts(conn):
     for row in rows:
         counts[row["category"]] = row["n"]
     return counts
+
+
+def merge_by_id(*lists):
+    """Merge several lists of entry rows, de-duplicating by id and sorting by
+    name — used to combine explicit dropdown relationships with wiki-link
+    backlinks into one table without showing the same entry twice."""
+    seen = {}
+    for lst in lists:
+        for row in lst:
+            seen[row["id"]] = row
+    return sorted(seen.values(), key=lambda r: (r["name"] or "").lower())
 
 
 def extract_link_names(content):
@@ -187,12 +217,47 @@ def get_backlinks(conn, entry_id):
     ).fetchall()
 
 
-def create_entry(conn, name, category, summary, content, author, image_filename=None):
+def get_characters_in_city(conn, city_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Character' AND home_city_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (city_id,),
+    ).fetchall()
+
+
+def get_characters_in_organization(conn, organization_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Character' AND organization_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (organization_id,),
+    ).fetchall()
+
+
+def get_organizations_in_city(conn, city_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Organization' AND headquarters_city_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (city_id,),
+    ).fetchall()
+
+
+def get_cities_in_region(conn, region_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'City' AND region_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (region_id,),
+    ).fetchall()
+
+
+def create_entry(conn, name, category, summary, content, author, image_filename=None,
+                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None):
     ts = now_iso()
     cur = conn.execute(
-        "INSERT INTO entry (name, category, summary, content, author, image_filename, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (name.strip(), category, summary.strip(), content, author.strip(), image_filename, ts, ts),
+        "INSERT INTO entry (name, category, summary, content, author, image_filename, "
+        "home_city_id, organization_id, region_id, headquarters_city_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (name.strip(), category, summary.strip(), content, author.strip(), image_filename,
+         home_city_id, organization_id, region_id, headquarters_city_id, ts, ts),
     )
     conn.commit()
     entry_id = cur.lastrowid
@@ -201,21 +266,29 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
     return entry_id
 
 
-def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None):
+def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
+                  home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
-    leave whatever image is already set untouched (use clear_entry_image to remove it)."""
+    leave whatever image is already set untouched (use clear_entry_image to remove it).
+    The relationship ids (home_city_id, etc.) are always set to whatever is passed
+    in, including None to clear them — unlike image_filename there's no separate
+    "leave unchanged" state, since a <select> always resubmits its current value."""
     ts = now_iso()
     if image_filename is not None:
         conn.execute(
             "UPDATE entry SET name = ?, category = ?, summary = ?, content = ?, author = ?, "
-            "image_filename = ?, updated_at = ? WHERE id = ?",
-            (name.strip(), category, summary.strip(), content, author.strip(), image_filename, ts, entry_id),
+            "image_filename = ?, home_city_id = ?, organization_id = ?, region_id = ?, "
+            "headquarters_city_id = ?, updated_at = ? WHERE id = ?",
+            (name.strip(), category, summary.strip(), content, author.strip(), image_filename,
+             home_city_id, organization_id, region_id, headquarters_city_id, ts, entry_id),
         )
     else:
         conn.execute(
-            "UPDATE entry SET name = ?, category = ?, summary = ?, content = ?, author = ?, updated_at = ? "
-            "WHERE id = ?",
-            (name.strip(), category, summary.strip(), content, author.strip(), ts, entry_id),
+            "UPDATE entry SET name = ?, category = ?, summary = ?, content = ?, author = ?, "
+            "home_city_id = ?, organization_id = ?, region_id = ?, headquarters_city_id = ?, "
+            "updated_at = ? WHERE id = ?",
+            (name.strip(), category, summary.strip(), content, author.strip(),
+             home_city_id, organization_id, region_id, headquarters_city_id, ts, entry_id),
         )
     conn.commit()
     resolve_dangling_links(conn, entry_id, name)

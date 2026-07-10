@@ -313,6 +313,16 @@ code {
   font-family: var(--font-heading);
 }
 
+.entry-relations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+}
+.entry-relations .relation-label { color: var(--text-muted); margin-right: 0.3rem; }
+
 .entry-portrait {
   width: 100%;
   max-width: 320px;
@@ -420,6 +430,15 @@ code {
 .btn-danger:hover { background: var(--danger-hover); }
 
 .entry-form { display: flex; flex-direction: column; gap: 1.1rem; max-width: 700px; }
+.entry-form .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius);
+  background: rgba(91,155,213,0.04);
+}
 .entry-form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: bold; font-family: var(--font-heading); }
 .entry-form .hint { font-weight: normal; color: var(--text-muted); font-size: 0.85rem; font-family: var(--font-body); }
 .entry-form input, .entry-form select, .entry-form textarea {
