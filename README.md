@@ -135,9 +135,15 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   paragraph of an entry's write-up. The homepage additionally spotlights
   whichever entry was chronicled most recently in one large featured card,
   with everything else just below it as a grid of smaller colored-top-bar
-  cards. The Map and City View stay in their simpler, uncluttered style,
-  since those are working views you glance at mid-session rather than pages
-  you sit and read.
+  cards. The Map gets its own variant of the same chronicle language: the
+  map viewport sits inside a gold corner-bracket frame with a small compass
+  rose in the corner, and a two-panel sidebar sits alongside it — a
+  "Legend" explaining the pin colors/shapes and a "Notable Locations" list
+  of every pin on the current map (respecting DM Mode's fog-of-war, so
+  undiscovered pins are dimmed and tagged for the DM instead of leaking to
+  players). City View stays in its simpler, uncluttered style, since it's
+  a working view you glance at mid-session rather than a page you sit and
+  read.
 - **Party Roster**: the "Party Roster" link in the nav is a fixed 5-slot
   page for your actual player characters. Mark any Character entry as a
   **Party Member** (a field right on the Character form) and fill in their

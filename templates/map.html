@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ current_map.name if current_map else 'Maps' }} — Ascension Campaign Codex{% endblock %}
 {% block content %}
-<div class="page-header">
+<section class="hero">
+  <span class="hero-tagline">The Ascension Campaign</span>
   <h1>{{ current_map.name if current_map else 'Maps' }}</h1>
-</div>
+</section>
+<div class="divider"><span class="divider-mark"></span></div>
 
 {% if maps %}
   <div class="map-switcher">
@@ -172,6 +174,17 @@
     {% endif %}
   {% endif %}
 
+  <div class="map-layout">
+  <div class="map-frame ornate-frame">
+    <span class="corner-bl"></span><span class="corner-br"></span>
+    <div class="map-compass" aria-hidden="true">
+      <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent-deep)" stroke-width="1.5"/>
+        <line x1="22" y1="5" x2="22" y2="39" stroke="var(--accent-deep)" stroke-width="1"/>
+        <line x1="5" y1="22" x2="39" y2="22" stroke="var(--accent-deep)" stroke-width="1"/>
+        <text x="22" y="13" text-anchor="middle" font-size="9" fill="var(--accent-deep)" font-family="serif">N</text>
+      </svg>
+    </div>
   <div class="map-page-wrap" id="mapWrap">
     <div class="map-inner" id="mapInner">
       <img id="mapImage" style="width: 100%;" src="{{ url_for('uploaded_file', filename=current_map['filename']) }}" alt="{{ current_map['name'] }}">
@@ -254,6 +267,63 @@
         </div>
       </div>
     </div>
+  </div>
+  </div>
+
+  <aside class="map-sidebar">
+    <div class="map-sidebar-panel ornate-frame">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <h3>Legend</h3>
+      <ul class="map-legend-list">
+        <li class="map-legend-item"><span class="map-legend-swatch cat-city"></span> Settlement (neutral)</li>
+        <li class="map-legend-item"><span class="map-legend-swatch pin-friendly"></span> Friendly (City/Organization)</li>
+        <li class="map-legend-item"><span class="map-legend-swatch pin-hostile"></span> Hostile (City/Organization)</li>
+        <li class="map-legend-item"><span class="map-legend-swatch map-legend-flag cat-city"></span> Organization</li>
+        <li class="map-legend-item"><span class="map-legend-swatch" style="background: {{ default_pin_color }};"></span> Character (own color per pin)</li>
+      </ul>
+    </div>
+
+    <div class="map-sidebar-panel ornate-frame">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <h3>Notable Locations</h3>
+      {% if pins %}
+        <ul class="map-notable-list">
+          {% for pin in pins %}
+            {% if pin.entry_category == "Character" %}
+              {% set pin_color = pin.color or default_pin_color %}
+              {% set item_class = "" %}
+            {% elif pin.entry_category == "Organization" %}
+              {% set item_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "cat-city") %}
+            {% else %}
+              {% set item_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "cat-city") %}
+            {% endif %}
+            <li class="map-notable-item {{ item_class }} {{ 'map-notable-undiscovered' if not pin.discovered else '' }}"
+                {% if pin.entry_category == "Character" %}style="--cat-color: {{ pin_color }}; --cat-light: {{ pin_color }};"{% endif %}>
+              {% if pin.entry_category == "City" %}
+                <a href="{{ url_for('city_view', city_id=pin.entry_id) }}">{{ pin.entry_name }}</a>
+              {% else %}
+                <a href="{{ url_for('entry_detail', entry_id=pin.entry_id) }}">{{ pin.entry_name }}</a>
+              {% endif %}
+              <span class="map-notable-sub">
+                {% if pin.entry_category == "Character" %}
+                  {{ pin.character_status or 'Unknown status' }}
+                {% elif pin.entry_category == "Organization" %}
+                  {% if pin.leader_name %}Led by {{ pin.leader_name }}{% else %}{{ pin.org_type or 'Organization' }}{% endif %}
+                {% else %}
+                  {% if pin.leader_name %}Led by {{ pin.leader_name }}
+                  {% elif pin.leading_org_name %}Ruled by {{ pin.leading_org_name }}
+                  {% else %}{{ pin.settlement_size or 'Settlement' }}{% endif %}
+                {% endif %}
+              </span>
+              {% if dm_mode and not pin.discovered %}<span class="map-pin-hidden-tag">Hidden from players</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-state">No pins placed on this map yet.</p>
+      {% endif %}
+    </div>
+  </aside>
   </div>
 
   <div class="divider"><span class="divider-mark"></span></div>

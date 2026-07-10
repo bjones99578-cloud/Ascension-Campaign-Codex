@@ -995,8 +995,12 @@ code {
    .cat-city color inherited from the .map-pins wrapper. Pins stay a bit more
    saturated than the rest of the ink palette on purpose -- they need to pop
    against whatever art the party's uploaded map happens to use. */
-.map-pin.pin-friendly { --cat-color: #3b6ea8; --cat-light: #2a4f7a; --cat-glow: rgba(59, 110, 168, 0.45); }
-.map-pin.pin-hostile { --cat-color: #b33224; --cat-light: #8a2519; --cat-glow: rgba(179, 50, 36, 0.45); }
+/* Not scoped to .map-pin specifically -- reused as a bare theme-setter on
+   the Map page's "Notable Locations" sidebar list too (see .map-notable-item),
+   so a pinned location's sidebar entry picks up the exact same color as its
+   pin on the map itself. */
+.pin-friendly { --cat-color: #3b6ea8; --cat-light: #2a4f7a; --cat-glow: rgba(59, 110, 168, 0.45); }
+.pin-hostile { --cat-color: #b33224; --cat-light: #8a2519; --cat-glow: rgba(179, 50, 36, 0.45); }
 .map-pin-dot {
   display: block;
   width: 18px;
@@ -1250,6 +1254,86 @@ code {
   text-decoration: underline;
 }
 .map-pin-submap-link:hover { color: var(--accent-hover); }
+
+/* ---------- Map page "chronicle" touches ---------- */
+/* The map itself and its pin-placement controls are left exactly as they
+   were (this is a working view the DM uses mid-session, not a page anyone
+   sits and reads) -- only the surrounding chrome picks up the site's
+   ornate/illuminated-manuscript language: a corner-bracketed frame around
+   the map viewport, a decorative compass rose, and a two-column layout with
+   a Legend + Notable Locations sidebar built from the map's own real pins. */
+.map-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .map-layout { grid-template-columns: 1fr; }
+}
+
+.map-frame {
+  position: relative;
+  padding: 0.6rem;
+}
+.map-compass {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 44px;
+  height: 44px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 3px var(--cat-glow));
+}
+.map-compass svg { width: 100%; height: 100%; }
+
+.map-sidebar { display: flex; flex-direction: column; gap: 1.25rem; }
+.map-sidebar-panel {
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+}
+.map-sidebar-panel h3 {
+  margin: 0 0 0.9rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cat-light);
+}
+
+.map-legend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.map-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cat-color);
+  box-shadow: 0 0 6px var(--cat-glow);
+  flex-shrink: 0;
+}
+.map-legend-swatch.map-legend-flag { border-radius: 3px; transform: rotate(45deg); }
+
+.map-notable-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+.map-notable-item {
+  border-left: 3px solid var(--cat-color);
+  padding-left: 0.7rem;
+}
+.map-notable-item a { font-family: var(--font-heading); font-weight: bold; color: var(--text); }
+.map-notable-item a:hover { color: var(--cat-light); text-decoration: none; }
+.map-notable-sub {
+  display: block;
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.map-notable-item.map-notable-undiscovered { opacity: 0.6; }
 
 /* ---------- Reference page (/reference) ---------- */
 /* Quick-lookup cards for Species and Classes, styled like a lighter, more
