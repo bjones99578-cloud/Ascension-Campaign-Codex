@@ -28,6 +28,11 @@
      un-fantasy so that one page reads like a team roster graphic rather
      than another illuminated-manuscript page. */
   --font-sport: "Anton", "Arial Narrow", sans-serif;
+  /* Used only by the Loot Tracker's "bank" theme below -- a monospaced
+     ledger face for numeric columns/balances, so figures line up in neat
+     tabular columns the way a real account statement's do. Left off item
+     names and every other page on purpose, same reasoning as --font-sport. */
+  --font-ledger: "IBM Plex Mono", "Courier New", monospace;
 
   /* Default category theme = the site's own gold, used wherever no specific
      category context applies (mixed listings, utility pages). */
@@ -962,28 +967,6 @@ code {
 
 /* ---------- loot tracker ---------- */
 
-.loot-total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--cat-color);
-  border-radius: var(--radius);
-  background: rgba(168, 97, 31, 0.08);
-  box-shadow: 0 0 14px var(--cat-glow);
-  margin-bottom: 1.5rem;
-}
-.loot-total-label {
-  font-family: var(--font-heading);
-  font-weight: bold;
-  color: var(--cat-light);
-}
-.loot-total-value {
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  font-weight: bold;
-  color: var(--cat-light);
-}
 /* Items that have been sold/given away/used/destroyed/lost still show up
    for the record, but visually recede -- they're history, not part of the
    current gold total above them. */
@@ -1014,6 +997,180 @@ code {
 .loot-input-narrow { width: 5rem; }
 .loot-row-actions { white-space: nowrap; display: flex; gap: 0.4rem; align-items: center; }
 .loot-delete-form { display: inline; }
+.loot-col-num, .loot-col-value { text-align: right; }
+
+/* The ledger has 8 columns of inline-editable controls -- too wide to
+   ever fit a phone screen without either cramming every input illegibly
+   small or letting the whole page overflow sideways. Scope the horizontal
+   scroll to just the table itself so the rest of the page (statement
+   panel, deposit form) stays full-width and legible on narrow viewports;
+   this is a real gap on the pre-theme table too, not something the bank
+   restyle introduced, so it's worth fixing here rather than leaving it
+   for a later pass. */
+.loot-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+}
+.loot-table-scroll .loot-table { border-radius: 0; }
+
+/* ---------- Loot Tracker: bank / ledger theme ---------- */
+/* Same "reskin the opaque, working elements only" rule as the Map and
+   Party Roster themes: the page background stays the site's normal
+   parchment (a bank statement is still paper), and what actually reads as
+   "orderly, like a bank" is the statement summary panel, the rarity
+   accent system, and switching numeric columns to a monospaced ledger
+   face so figures line up the way a real account statement's do -- not a
+   wholesale dark reskin the way Party Roster's cards got. */
+
+.loot-statement {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.25rem 1.75rem;
+  margin-bottom: 1.5rem;
+  border-color: var(--cat-color);
+  background: linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+  box-shadow: 0 0 14px var(--cat-glow);
+}
+.loot-statement-balance { display: flex; flex-direction: column; gap: 0.2rem; }
+.loot-statement-label {
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.loot-statement-value {
+  font-family: var(--font-ledger);
+  font-weight: 600;
+  font-size: 2rem;
+  color: var(--cat-light);
+  font-variant-numeric: tabular-nums;
+}
+.loot-statement-unit { font-size: 1.1rem; color: var(--text-muted); }
+
+.loot-statement-stats { display: flex; gap: 1.75rem; flex-wrap: wrap; }
+.loot-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; }
+.loot-stat-value {
+  font-family: var(--font-ledger);
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.loot-stat-label {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.loot-stat-rarity { align-items: flex-start; }
+
+/* The party's loose coin, editable right in the statement panel since it
+   feeds the Current Balance figure directly above -- kept visually
+   distinct from the stat figures (a form, not a read-only count) but
+   still narrow/ledger-numeric like the rest of the panel. */
+.loot-funds-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px dashed var(--border-soft);
+  flex-basis: 100%;
+}
+.loot-funds-label {
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-right: 0.25rem;
+}
+.loot-funds-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.loot-funds-denom {
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* One shared --rarity-color custom property per tier, read by the row
+   accent, the inline rarity <select>, and the read-only summary badge
+   below -- so a new tier only ever needs to be added in one place. */
+.loot-rarity-mundane   { --rarity-color: #7d766a; }
+.loot-rarity-common    { --rarity-color: #8a8378; }
+.loot-rarity-uncommon  { --rarity-color: #3f7d52; }
+.loot-rarity-rare      { --rarity-color: #2f4f8c; }
+.loot-rarity-very-rare { --rarity-color: #6b1f7d; }
+.loot-rarity-legendary { --rarity-color: #c99a2e; }
+.loot-rarity-artifact  { --rarity-color: #9c3324; }
+
+.loot-rarity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--rarity-color, var(--border));
+  color: var(--rarity-color, var(--text-muted));
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+.loot-rarity-none { border-style: dashed; color: var(--text-muted); font-weight: normal; }
+
+/* A colored ledger tab down the left edge of any row with a rarity set,
+   like a filed statement page tabbed by account tier -- and the rarity
+   <select> itself picks up the same color, so the tier reads at a glance
+   even while the row is still in its editable state. */
+.theme-loot-bank .loot-table tr[class*="loot-rarity-"] td:first-child {
+  border-left: 3px solid var(--rarity-color, transparent);
+  padding-left: calc(0.9rem - 3px);
+}
+.theme-loot-bank .loot-table select[name="rarity"] {
+  border-color: var(--rarity-color, var(--border));
+  color: var(--rarity-color, var(--text));
+}
+
+/* Ledger figures -- row number, quantity, value -- align in a monospaced
+   tabular column, like the numeric columns of a real statement. Item
+   names, types, and status stay in the site's normal body/heading fonts;
+   only the numbers switch face. */
+.loot-ledger-line {
+  font-family: var(--font-ledger);
+  font-variant-numeric: tabular-nums;
+}
+td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
+.theme-loot-bank .loot-table th.loot-col-num,
+.theme-loot-bank .loot-table th.loot-col-value {
+  font-family: var(--font-ledger);
+  letter-spacing: normal;
+}
+
+/* Ruled-ledger row lines in a cool blue-gray instead of the site's usual
+   warm border-soft, and a slightly heavier header rule -- the one place
+   on this page that departs from the manuscript palette, since ruled
+   ledger paper reads as blue-lined the world over. */
+.theme-loot-bank .loot-table th, .theme-loot-bank .loot-table td { border-bottom-color: rgba(53, 96, 122, 0.18); }
+.theme-loot-bank .loot-table thead th { border-bottom: 2px solid rgba(53, 96, 122, 0.4); }
+
+/* The "New Deposit" quick-add form gets its own bordered slip, so it
+   reads as a distinct piece of paper being filled out and handed across
+   the counter rather than just another form floating on the page. */
+.theme-loot-bank .loot-add-form {
+  padding: 1.1rem 1.25rem;
+  border: 1px dashed var(--cat-color);
+  border-radius: var(--radius);
+  background: rgba(168, 97, 31, 0.05);
+}
 
 .btn-sm { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
 

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Loot Tracker — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-item{% endblock %}
+{% block page_class %}theme-loot-bank{% endblock %}
 
 {% macro option_select(name, form_id, options, current) %}
   <select name="{{ name }}" form="{{ form_id }}">
@@ -10,6 +11,8 @@
     {% endfor %}
   </select>
 {% endmacro %}
+
+{% macro rarity_slug(value) %}{{ value|lower|replace(' ', '-') if value else '' }}{% endmacro %}
 
 {% block content %}
 <div class="themed-banner">
@@ -24,12 +27,53 @@
 
 {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
 
-<div class="loot-total">
-  <span class="loot-total-label">Party Treasury</span>
-  <span class="loot-total-value">{{ total_value }} gp</span>
+<div class="loot-statement ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
+  <div class="loot-statement-balance">
+    <span class="loot-statement-label">Current Balance</span>
+    <span class="loot-statement-value">{{ "%.2f"|format(total_value) }} <span class="loot-statement-unit">gp</span></span>
+  </div>
+  <div class="loot-statement-stats">
+    <div class="loot-stat">
+      <span class="loot-stat-value">{{ holdings_count }}</span>
+      <span class="loot-stat-label">Holdings</span>
+    </div>
+    <div class="loot-stat">
+      <span class="loot-stat-value">{{ history_count }}</span>
+      <span class="loot-stat-label">Historical</span>
+    </div>
+    <div class="loot-stat loot-stat-rarity">
+      {% if highest_rarity %}
+        <span class="loot-rarity-badge loot-rarity-{{ rarity_slug(highest_rarity) }}">{{ highest_rarity }}</span>
+      {% else %}
+        <span class="loot-rarity-badge loot-rarity-none">None on file</span>
+      {% endif %}
+      <span class="loot-stat-label">Highest Rarity</span>
+    </div>
+  </div>
+  <form class="loot-funds-form" method="post" action="{{ url_for('loot_funds_update') }}">
+    <span class="loot-funds-label">Coin Purse</span>
+    <label class="loot-funds-field">
+      <input type="number" name="pp" min="0" value="{{ funds.pp }}" class="loot-input loot-input-narrow loot-ledger-line">
+      <span class="loot-funds-denom">pp</span>
+    </label>
+    <label class="loot-funds-field">
+      <input type="number" name="gp" min="0" value="{{ funds.gp }}" class="loot-input loot-input-narrow loot-ledger-line">
+      <span class="loot-funds-denom">gp</span>
+    </label>
+    <label class="loot-funds-field">
+      <input type="number" name="sp" min="0" value="{{ funds.sp }}" class="loot-input loot-input-narrow loot-ledger-line">
+      <span class="loot-funds-denom">sp</span>
+    </label>
+    <label class="loot-funds-field">
+      <input type="number" name="cp" min="0" value="{{ funds.cp }}" class="loot-input loot-input-narrow loot-ledger-line">
+      <span class="loot-funds-denom">cp</span>
+    </label>
+    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+  </form>
 </div>
 
-<div class="divider"><span class="divider-mark"></span></div>
+<div class="section-heading"><span class="section-heading-mark"></span>New Deposit<span class="section-heading-mark"></span></div>
 
 <form class="entry-form search-filters-form loot-add-form" method="post" action="{{ url_for('loot_item_add') }}">
   <label>
@@ -70,20 +114,22 @@
   </div>
 </form>
 
-<div class="divider"><span class="divider-mark"></span></div>
+<div class="section-heading"><span class="section-heading-mark"></span>Ledger<span class="section-heading-mark"></span></div>
 
 {% if items %}
   {% for item in items %}
     <form id="loot-form-{{ item['id'] }}" method="post" action="{{ url_for('loot_item_update', item_id=item['id']) }}"></form>
   {% endfor %}
+  <div class="loot-table-scroll">
   <table class="related-table loot-table">
     <thead>
       <tr>
+        <th class="loot-col-num">No.</th>
         <th>Item</th>
         <th>Type</th>
-        <th>Qty</th>
+        <th class="loot-col-num">Qty</th>
         <th>Rarity</th>
-        <th>Value (gp)</th>
+        <th class="loot-col-value">Value (gp)</th>
         <th>Status</th>
         <th></th>
       </tr>
@@ -91,14 +137,15 @@
     <tbody>
       {% for item in items %}
         {% set form_id = "loot-form-" ~ item['id'] %}
-        <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %}">
+        <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %} {% if item['rarity'] %}loot-rarity-{{ rarity_slug(item['rarity']) }}{% endif %}">
+          <td class="loot-col-num loot-ledger-line">{{ "%02d"|format(loop.index) }}</td>
           <td>
             <input type="text" name="name" value="{{ item['name'] }}" form="{{ form_id }}" class="loot-input loot-input-name" required>
           </td>
           <td>{{ option_select("item_type", form_id, field_options.item_type, item['item_type']) }}</td>
-          <td><input type="number" name="quantity" min="0" value="{{ item['quantity'] if item['quantity'] is not none else 1 }}" form="{{ form_id }}" class="loot-input loot-input-narrow"></td>
+          <td class="loot-col-num"><input type="number" name="quantity" min="0" value="{{ item['quantity'] if item['quantity'] is not none else 1 }}" form="{{ form_id }}" class="loot-input loot-input-narrow loot-ledger-line"></td>
           <td>{{ option_select("rarity", form_id, field_options.rarity, item['rarity']) }}</td>
-          <td><input type="number" name="estimated_value" min="0" value="{{ item['estimated_value'] if item['estimated_value'] is not none else '' }}" form="{{ form_id }}" class="loot-input loot-input-narrow"></td>
+          <td class="loot-col-value"><input type="number" name="estimated_value" min="0" value="{{ item['estimated_value'] if item['estimated_value'] is not none else '' }}" form="{{ form_id }}" class="loot-input loot-input-narrow loot-ledger-line"></td>
           <td>{{ option_select("item_status", form_id, field_options.item_status, item['item_status']) }}</td>
           <td class="loot-row-actions">
             <button type="submit" form="{{ form_id }}" class="btn btn-primary btn-sm">Save</button>
@@ -112,6 +159,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 {% else %}
   <p class="empty-state">No shared loot yet — add the party's first item above, or clear an Item's Current Holder field to move it here.</p>
 {% endif %}

@@ -1114,6 +1114,38 @@ def get_shared_loot_items(conn):
     ).fetchall()
 
 
+PARTY_FUNDS_DENOMINATIONS = [
+    ("pp", "Platinum", 10),
+    ("gp", "Gold", 1),
+    ("sp", "Silver", 0.1),
+    ("cp", "Copper", 0.01),
+]
+
+
+def get_party_funds(conn):
+    """Loose coin the party is carrying, separate from itemized loot -- a
+    single shared total per denomination (not one row per deposit), stored
+    in the generic `setting` table the same way Bastion's overall settings
+    are (see get_setting/set_setting)."""
+    return {
+        denom: int(get_setting(conn, f"party_funds_{denom}", "0") or 0)
+        for denom, _, _ in PARTY_FUNDS_DENOMINATIONS
+    }
+
+
+def set_party_funds(conn, funds):
+    """Overwrites the party's on-hand coin totals. `funds` is a dict keyed
+    by denomination (pp/gp/sp/cp)."""
+    for denom, _, _ in PARTY_FUNDS_DENOMINATIONS:
+        set_setting(conn, f"party_funds_{denom}", str(int(funds.get(denom, 0))))
+
+
+def party_funds_gp_value(funds):
+    """Converts a denomination dict to its total gp-equivalent value, using
+    standard D&D coin conversion (10cp=1sp, 10sp=1gp, 10gp=1pp)."""
+    return sum(funds.get(denom, 0) * rate for denom, _, rate in PARTY_FUNDS_DENOMINATIONS)
+
+
 def update_item_loot_fields(conn, entry_id, name, item_type, quantity, rarity, estimated_value, item_status):
     """A narrow, Loot-Tracker-specific update touching only the fields its
     inline-editable row exposes (name + the five quick-edit columns) --

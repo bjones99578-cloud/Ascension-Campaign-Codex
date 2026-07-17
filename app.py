@@ -871,18 +871,47 @@ def loot_tracker():
     show up, but as history rather than current wealth."""
     conn = get_conn()
     items = models.get_shared_loot_items(conn)
-    total_value = sum(
-        item["estimated_value"] or 0
-        for item in items
-        if item["item_status"] in (None, "", "In Possession")
-    )
+    in_possession = [item for item in items if item["item_status"] in (None, "", "In Possession")]
+    funds = models.get_party_funds(conn)
+    total_value = models.party_funds_gp_value(funds) + sum(item["estimated_value"] or 0 for item in in_possession)
+
+    # A "highest rarity currently on the books" figure for the statement
+    # summary -- ranked against the built-in Rarity option order (not the
+    # merged/custom-extended one _loot_field_options returns) so a
+    # party-added custom rarity value can't silently outrank Legendary/
+    # Artifact just because it happens to sort later in that list.
+    rarity_rank = models.OPTIONS_BY_FIELD.get("rarity", [])
+    highest_rarity = None
+    for item in in_possession:
+        r = item["rarity"]
+        if r in rarity_rank and (highest_rarity is None or rarity_rank.index(r) > rarity_rank.index(highest_rarity)):
+            highest_rarity = r
+
     return render_template(
         "loot.html",
         items=items,
+        funds=funds,
         total_value=total_value,
+        holdings_count=len(in_possession),
+        history_count=len(items) - len(in_possession),
+        highest_rarity=highest_rarity,
         field_options=_loot_field_options(conn),
         error=request.args.get("error"),
     )
+
+
+@app.route("/loot/funds", methods=["POST"])
+def loot_funds_update():
+    """Updates the party's on-hand coin totals (loose pp/gp/sp/cp, separate
+    from itemized loot below) -- a single shared purse, same key/value
+    settings pattern as Bastion's overall settings."""
+    conn = get_conn()
+    funds = {
+        denom: request.form.get(denom, type=int) or 0
+        for denom, _, _ in models.PARTY_FUNDS_DENOMINATIONS
+    }
+    models.set_party_funds(conn, funds)
+    return redirect(url_for("loot_tracker"))
 
 
 @app.route("/loot/items", methods=["POST"])
