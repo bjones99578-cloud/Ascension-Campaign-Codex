@@ -2,6 +2,7 @@
 {% import "_project_widget.html" as pw with context %}
 {% block title %}Bastion — Ascension Campaign Codex{% endblock %}
 {% block body_class %}cat-bastion{% endblock %}
+{% block page_class %}theme-bastion-cloudship{% endblock %}
 
 {% macro type_select(name, form_id, types, current_key, custom_label) %}
   <select name="{{ name }}" form="{{ form_id }}" class="loot-input">
@@ -13,7 +14,7 @@
   </select>
 {% endmacro %}
 
-{% macro facility_row(facility, types, form_id) %}
+{% macro basic_facility_row(facility, types, form_id) %}
   {% set is_custom = not facility['facility_key'] and facility['custom_type_name'] %}
   {% set current_type = facility_types_by_key.get(facility['facility_key']) %}
   <tr>
@@ -22,18 +23,7 @@
       <input type="text" name="custom_type_name" form="{{ form_id }}" placeholder="Custom type name…"
              value="{{ facility['custom_type_name'] or '' }}" class="loot-input bastion-input-custom-type">
     </td>
-    <td><input type="text" name="instance_name" form="{{ form_id }}" value="{{ facility['instance_name'] or '' }}" placeholder="e.g. The Sky Loom" class="loot-input"></td>
-    {% if facility['slot_category'] == 'Special' %}
-      <td>
-        <select name="current_order" form="{{ form_id }}" class="loot-input">
-          <option value=""{% if not facility['current_order'] %} selected{% endif %}>—</option>
-          {% for o in order_options %}
-            <option value="{{ o }}"{% if o == facility['current_order'] %} selected{% endif %}>{{ o }}</option>
-          {% endfor %}
-        </select>
-      </td>
-      <td><input type="text" name="hirelings" form="{{ form_id }}" value="{{ facility['hirelings'] or '' }}" class="loot-input"></td>
-    {% endif %}
+    <td><input type="text" name="instance_name" form="{{ form_id }}" value="{{ facility['instance_name'] or '' }}" placeholder="e.g. The Galley" class="loot-input"></td>
     <td><input type="text" name="notes" form="{{ form_id }}" value="{{ facility['notes'] or '' }}" placeholder="notes…" class="loot-input bastion-input-notes"></td>
     <td class="loot-row-actions">
       <button type="submit" form="{{ form_id }}" class="btn btn-primary btn-sm">Save</button>
@@ -45,13 +35,11 @@
   </tr>
   {% if current_type %}
     <tr class="bastion-description-row">
-      <td colspan="{{ 6 if facility['slot_category'] == 'Special' else 4 }}">
-        <span class="bastion-description">{{ current_type.description }}</span>
-      </td>
+      <td colspan="4"><span class="bastion-description">{{ current_type.description }}</span></td>
     </tr>
   {% endif %}
   <tr class="bastion-image-row">
-    <td colspan="{{ 6 if facility['slot_category'] == 'Special' else 4 }}">
+    <td colspan="4">
       <div class="bastion-image-block">
         {% if facility['image_filename'] %}
           <div class="current-image">
@@ -66,19 +54,76 @@
       </div>
     </td>
   </tr>
-  {% if facility['slot_category'] == 'Special' %}
-    {% set flist = facility_projects.get(facility['id'], []) %}
-    <tr class="bastion-project-row">
-      <td colspan="6">
-        {% if flist %}
-          {{ pw.project_widget(flist[-1], url_for('bastion_page')) }}
-        {% endif %}
-        {% if not flist or flist[-1]['progress_amount'] >= flist[-1]['target_amount'] %}
-          {{ pw.project_add_form('bastion_facility', facility['id'], url_for('bastion_page'), '+ Start Project') }}
-        {% endif %}
-      </td>
-    </tr>
-  {% endif %}
+{% endmacro %}
+
+{% macro special_facility_card(facility, types, form_id) %}
+  {% set is_custom = not facility['facility_key'] and facility['custom_type_name'] %}
+  {% set current_type = facility_types_by_key.get(facility['facility_key']) %}
+  {% set flist = facility_projects.get(facility['id'], []) %}
+  <div class="bastion-card">
+    {% if facility['image_filename'] %}
+      <div class="bastion-card-porthole">
+        <img src="{{ url_for('uploaded_file', filename=facility['image_filename']) }}" alt="">
+      </div>
+    {% endif %}
+
+    <div class="bastion-card-plaque">
+      {{ type_select("facility_key", form_id, types, facility['facility_key'], is_custom) }}
+      <input type="text" name="custom_type_name" form="{{ form_id }}" placeholder="Custom type name…"
+             value="{{ facility['custom_type_name'] or '' }}" class="loot-input bastion-input-custom-type">
+      <input type="text" name="instance_name" form="{{ form_id }}" value="{{ facility['instance_name'] or '' }}"
+             placeholder="e.g. The Sky Loom" class="loot-input bastion-card-name-input">
+    </div>
+
+    {% if current_type %}
+      <p class="bastion-description">{{ current_type.description }}</p>
+    {% endif %}
+
+    <div class="bastion-card-duty">
+      <label class="bastion-stat">
+        <span class="bastion-stat-label">Order</span>
+        <select name="current_order" form="{{ form_id }}" class="loot-input">
+          <option value=""{% if not facility['current_order'] %} selected{% endif %}>—</option>
+          {% for o in order_options %}
+            <option value="{{ o }}"{% if o == facility['current_order'] %} selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="bastion-stat">
+        <span class="bastion-stat-label">Hirelings</span>
+        <input type="text" name="hirelings" form="{{ form_id }}" value="{{ facility['hirelings'] or '' }}" class="loot-input">
+      </label>
+    </div>
+
+    <input type="text" name="notes" form="{{ form_id }}" value="{{ facility['notes'] or '' }}" placeholder="notes…" class="loot-input bastion-card-notes">
+
+    <div class="bastion-image-block">
+      {% if facility['image_filename'] %}
+        <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
+          <input type="checkbox" name="remove_image" value="1" form="{{ form_id }}" style="width: auto;">
+          Remove this image
+        </label>
+      {% endif %}
+      <input type="file" name="image" form="{{ form_id }}" accept="image/png, image/jpeg, image/gif, image/webp" class="bastion-image-input">
+    </div>
+
+    <div class="bastion-card-actions">
+      <button type="submit" form="{{ form_id }}" class="btn btn-primary btn-sm">Save</button>
+      <form method="post" action="{{ url_for('bastion_facility_delete', facility_id=facility['id']) }}" class="loot-delete-form"
+            onsubmit="return confirm('Remove this facility slot from the Bastion?');">
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+      </form>
+    </div>
+
+    <div class="bastion-card-project">
+      {% if flist %}
+        {{ pw.project_widget(flist[-1], url_for('bastion_page')) }}
+      {% endif %}
+      {% if not flist or flist[-1]['progress_amount'] >= flist[-1]['target_amount'] %}
+        {{ pw.project_add_form('bastion_facility', facility['id'], url_for('bastion_page'), '+ Start Order') }}
+      {% endif %}
+    </div>
+  </div>
 {% endmacro %}
 
 {% block content %}
@@ -92,36 +137,38 @@
   <p class="summary">The crew's shared floating stronghold. Set your Bastion's level to unlock Special Facility slots (2 at level 5, 4 at 9, 5 at 13, 6 at 17), pick a facility for each slot, and rename anything to fit your homebrew airship.</p>
 </div>
 
-{% if bastion_image_filename %}
-  <img class="entry-portrait" src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="{{ bastion_name or 'The Bastion' }}">
-{% endif %}
-
-<form class="entry-form search-filters-form" method="post" action="{{ url_for('bastion_settings_update') }}" enctype="multipart/form-data">
-  <label>
-    Bastion name
-    <input type="text" name="bastion_name" value="{{ bastion_name }}" placeholder="e.g. The Windrunner">
-  </label>
-  <label>
-    Bastion level
-    <input type="number" name="bastion_level" min="1" max="20" value="{{ bastion_level }}" style="width: 5rem;">
-  </label>
-  <label>
-    Picture <span class="hint">(a painting/photo of the ship itself — optional)</span>
-    {% if bastion_image_filename %}
-      <div class="current-image">
-        <img src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="">
-        <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
-          <input type="checkbox" name="remove_image" value="1" style="width: auto;">
-          Remove this image
-        </label>
-      </div>
-    {% endif %}
-    <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp">
-  </label>
-  <div class="form-actions">
-    <button type="submit" class="btn btn-primary">Save</button>
-  </div>
-</form>
+<div class="bastion-helm ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
+  {% if bastion_image_filename %}
+    <img class="bastion-figurehead" src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="{{ bastion_name or 'The Bastion' }}">
+  {% endif %}
+  <form class="entry-form search-filters-form bastion-helm-form" method="post" action="{{ url_for('bastion_settings_update') }}" enctype="multipart/form-data">
+    <label>
+      Ship name
+      <input type="text" name="bastion_name" value="{{ bastion_name }}" placeholder="e.g. The Windrunner">
+    </label>
+    <label>
+      Bastion level
+      <input type="number" name="bastion_level" min="1" max="20" value="{{ bastion_level }}" style="width: 5rem;">
+    </label>
+    <label>
+      Picture <span class="hint">(a painting/photo of the ship itself — optional)</span>
+      {% if bastion_image_filename %}
+        <div class="current-image">
+          <img src="{{ url_for('uploaded_file', filename=bastion_image_filename) }}" alt="">
+          <label style="flex-direction: row; align-items: center; gap: 0.4rem; font-weight: normal;">
+            <input type="checkbox" name="remove_image" value="1" style="width: auto;">
+            Remove this image
+          </label>
+        </div>
+      {% endif %}
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp">
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+</div>
 
 <div class="divider"><span class="divider-mark"></span></div>
 
@@ -138,7 +185,7 @@
     </thead>
     <tbody>
       {% for facility in basic_facilities %}
-        {{ facility_row(facility, facility_types.basic, "bastion-form-" ~ facility['id']) }}
+        {{ basic_facility_row(facility, facility_types.basic, "bastion-form-" ~ facility['id']) }}
       {% endfor %}
     </tbody>
   </table>
@@ -168,16 +215,11 @@
   <form id="bastion-form-{{ facility['id'] }}" method="post" action="{{ url_for('bastion_facility_update', facility_id=facility['id']) }}" enctype="multipart/form-data"></form>
 {% endfor %}
 {% if special_facilities %}
-  <table class="related-table bastion-table">
-    <thead>
-      <tr><th>Type</th><th>Name</th><th>Order</th><th>Hirelings</th><th>Notes</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for facility in special_facilities %}
-        {{ facility_row(facility, available_special_types, "bastion-form-" ~ facility['id']) }}
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="bastion-fleet-grid">
+    {% for facility in special_facilities %}
+      {{ special_facility_card(facility, available_special_types, "bastion-form-" ~ facility['id']) }}
+    {% endfor %}
+  </div>
 {% else %}
   <p class="empty-state">No Special Facilities yet — raise your Bastion's level to 5 or higher, then add your first slot below.</p>
 {% endif %}
@@ -191,7 +233,7 @@
 
 <div class="divider"><span class="divider-mark"></span></div>
 
-<div class="section-heading"><span class="section-heading-mark"></span>Facility Types<span class="section-heading-mark"></span></div>
+<div class="section-heading"><span class="section-heading-mark"></span>Ship's Manifest<span class="section-heading-mark"></span></div>
 <p class="summary">Rename or re-describe any official facility type here — the change applies everywhere that type is used, official 2024 DMG rules text stays visible below as a reference.</p>
 
 <div class="bastion-type-group">

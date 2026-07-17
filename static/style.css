@@ -33,6 +33,11 @@
      tabular columns the way a real account statement's do. Left off item
      names and every other page on purpose, same reasoning as --font-sport. */
   --font-ledger: "IBM Plex Mono", "Courier New", monospace;
+  /* Used only by the Bastion's "cloud ship" theme below -- a weathered,
+     hand-carved display face for the ship's own name and each facility's
+     door-plaque nameplate, same "one page, one accent, used sparingly"
+     reasoning as --font-sport/--font-ledger. */
+  --font-nautical: "Pirata One", "Cinzel", serif;
 
   /* Default category theme = the site's own gold, used wherever no specific
      category context applies (mixed listings, utility pages). */
@@ -1226,10 +1231,107 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
 .bastion-type-name-input { width: 14rem; font-weight: bold; }
 .bastion-type-desc-input { flex: 1; min-width: 16rem; }
 
-/* The Order-progress project nested under a Special Facility's own row --
-   full-width, no top border/padding so it reads as part of that facility's
-   row rather than a new table entry. */
-.bastion-project-row td { border-top: none; padding-top: 0; padding-bottom: 0.9rem; background: none; }
+/* ---------- Bastion: cloud ship theme ---------- */
+/* Same "reskin the opaque, working elements only" rule as Map/Roster/Loot:
+   the page banner stays on the normal parchment background, but the helm
+   panel (ship name/level/portrait) and each Special Facility card ARE
+   single self-contained opaque boxes, so those get the full sky-and-brass
+   treatment. Basic Facilities stay a plain themed table -- flavor-only,
+   far less data per row, a full card doesn't earn its keep there the way
+   it does for Special Facilities' Order/Hirelings/Project data. */
+
+.bastion-helm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  border-color: var(--cat-color);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%),
+    linear-gradient(160deg, var(--bg-card), var(--bg-panel));
+  box-shadow: 0 0 20px var(--cat-glow);
+}
+.bastion-figurehead {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid var(--cat-color);
+  box-shadow: 0 0 18px var(--cat-glow);
+  flex-shrink: 0;
+}
+.bastion-helm-form { flex: 1; min-width: 16rem; margin: 0; }
+
+.theme-bastion-cloudship .page-header h1 { font-family: var(--font-nautical); letter-spacing: 0.03em; }
+
+/* A Special Facility's door plaque + porthole picture + duty log, laid
+   out as its own card rather than a row in a wide table -- "restructure,
+   don't just recolor": Order/Hirelings/Project are the actual meat of a
+   Special Facility, so they get real visual weight instead of being two
+   more narrow columns squeezed into an already-crowded row. */
+.bastion-fleet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.bastion-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border: 1px solid var(--cat-color);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 15% 0%, var(--cat-glow), transparent 60%),
+    var(--bg-card);
+  box-shadow: 0 0 14px var(--cat-glow);
+}
+.bastion-card-porthole {
+  margin: -1.1rem -1.1rem 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+  border-bottom: 3px solid var(--cat-color);
+}
+.bastion-card-porthole img { width: 100%; height: 9rem; object-fit: cover; display: block; }
+.bastion-card-plaque { display: flex; flex-direction: column; gap: 0.4rem; }
+.bastion-card-name-input {
+  font-family: var(--font-nautical);
+  font-size: 1.15rem;
+  color: var(--cat-light);
+  letter-spacing: 0.02em;
+}
+.bastion-card-duty {
+  display: flex;
+  gap: 0.6rem;
+}
+.bastion-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--cat-color);
+  background: rgba(0, 0, 0, 0.12);
+}
+.bastion-stat-label {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.bastion-card-notes { font-style: italic; }
+.bastion-card-actions { display: flex; gap: 0.5rem; }
+.bastion-card-project { margin-top: 0.25rem; }
+.bastion-card-project .project-card { margin: 0; }
+
+/* Basic Facilities table keeps the plain layout but picks up the same
+   sky/brass accent border as the rest of the theme. */
+.theme-bastion-cloudship .bastion-table thead th { border-bottom: 2px solid var(--cat-color); }
 
 /* ---------- projects ---------- */
 /* Shared by the Bastion (a Special Facility's current Order) and a Player
