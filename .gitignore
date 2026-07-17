@@ -5,3 +5,4 @@ static/uploads/
 venv/
 .env
 backups/
+.claude/settings.local.json

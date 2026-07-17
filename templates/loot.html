@@ -53,27 +53,17 @@
   </div>
   <form class="loot-funds-form" method="post" action="{{ url_for('loot_funds_update') }}">
     <span class="loot-funds-label">Coin Purse</span>
-    <label class="loot-funds-field">
-      <input type="number" name="pp" min="0" value="{{ funds.pp }}" class="loot-input loot-input-narrow loot-ledger-line">
-      <span class="loot-funds-denom">pp</span>
-    </label>
-    <label class="loot-funds-field">
-      <input type="number" name="gp" min="0" value="{{ funds.gp }}" class="loot-input loot-input-narrow loot-ledger-line">
-      <span class="loot-funds-denom">gp</span>
-    </label>
-    <label class="loot-funds-field">
-      <input type="number" name="sp" min="0" value="{{ funds.sp }}" class="loot-input loot-input-narrow loot-ledger-line">
-      <span class="loot-funds-denom">sp</span>
-    </label>
-    <label class="loot-funds-field">
-      <input type="number" name="cp" min="0" value="{{ funds.cp }}" class="loot-input loot-input-narrow loot-ledger-line">
-      <span class="loot-funds-denom">cp</span>
-    </label>
+    {% for denom, label, _ in funds_denominations %}
+      <label class="loot-funds-field">
+        <input type="number" name="{{ denom }}" min="0" value="{{ funds[denom] }}" title="{{ label }}" class="loot-input loot-input-narrow loot-ledger-line">
+        <span class="loot-funds-denom">{{ denom }}</span>
+      </label>
+    {% endfor %}
     <button type="submit" class="btn btn-sm btn-primary">Save</button>
   </form>
 </div>
 
-<div class="section-heading"><span class="section-heading-mark"></span>New Deposit<span class="section-heading-mark"></span></div>
+<div class="section-heading"><span class="section-heading-mark"></span>New Item<span class="section-heading-mark"></span></div>
 
 <form class="entry-form search-filters-form loot-add-form" method="post" action="{{ url_for('loot_item_add') }}">
   <label>
@@ -139,7 +129,7 @@
         {% set form_id = "loot-form-" ~ item['id'] %}
         <tr class="{% if item['item_status'] and item['item_status'] != 'In Possession' %}loot-row-history{% endif %} {% if item['rarity'] %}loot-rarity-{{ rarity_slug(item['rarity']) }}{% endif %}">
           <td class="loot-col-num loot-ledger-line">{{ "%02d"|format(loop.index) }}</td>
-          <td>
+          <td class="loot-col-item">
             <input type="text" name="name" value="{{ item['name'] }}" form="{{ form_id }}" class="loot-input loot-input-name" required>
           </td>
           <td>{{ option_select("item_type", form_id, field_options.item_type, item['item_type']) }}</td>

@@ -622,13 +622,14 @@ def get_setting(conn, key, default=None):
     return row["value"] if row else default
 
 
-def set_setting(conn, key, value):
+def set_setting(conn, key, value, commit=True):
     conn.execute(
         "INSERT INTO setting (key, value) VALUES (?, ?) "
         "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         (key, value),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def now_iso():
@@ -1126,18 +1127,27 @@ def get_party_funds(conn):
     """Loose coin the party is carrying, separate from itemized loot -- a
     single shared total per denomination (not one row per deposit), stored
     in the generic `setting` table the same way Bastion's overall settings
-    are (see get_setting/set_setting)."""
-    return {
-        denom: int(get_setting(conn, f"party_funds_{denom}", "0") or 0)
-        for denom, _, _ in PARTY_FUNDS_DENOMINATIONS
-    }
+    are (see get_setting/set_setting). Falls back to 0 for a denomination
+    whose stored value somehow isn't a plain integer (e.g. a hand-edited
+    database row) instead of raising and taking down the whole page."""
+    funds = {}
+    for denom, _, _ in PARTY_FUNDS_DENOMINATIONS:
+        raw = get_setting(conn, f"party_funds_{denom}", "0")
+        try:
+            funds[denom] = int(raw)
+        except (TypeError, ValueError):
+            funds[denom] = 0
+    return funds
 
 
 def set_party_funds(conn, funds):
-    """Overwrites the party's on-hand coin totals. `funds` is a dict keyed
-    by denomination (pp/gp/sp/cp)."""
+    """Overwrites the party's on-hand coin totals in a single transaction
+    -- writing each denomination through its own commit would risk a
+    partially-saved purse if the process were interrupted mid-save.
+    `funds` is a dict keyed by denomination (pp/gp/sp/cp)."""
     for denom, _, _ in PARTY_FUNDS_DENOMINATIONS:
-        set_setting(conn, f"party_funds_{denom}", str(int(funds.get(denom, 0))))
+        set_setting(conn, f"party_funds_{denom}", str(int(funds.get(denom, 0))), commit=False)
+    conn.commit()
 
 
 def party_funds_gp_value(funds):

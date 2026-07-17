@@ -1130,11 +1130,20 @@ code {
 /* A colored ledger tab down the left edge of any row with a rarity set,
    like a filed statement page tabbed by account tier -- and the rarity
    <select> itself picks up the same color, so the tier reads at a glance
-   even while the row is still in its editable state. */
-.theme-loot-bank .loot-table tr[class*="loot-rarity-"] td:first-child {
+   even while the row is still in its editable state. Targets .loot-col-item
+   (the Item cell) rather than :first-child, since the row-number column
+   added for this theme is the actual first cell in each row. */
+.theme-loot-bank .loot-table tr[class*="loot-rarity-"] td.loot-col-item {
   border-left: 3px solid var(--rarity-color, transparent);
   padding-left: calc(0.9rem - 3px);
 }
+/* .related-table's generic td:first-child bold/nowrap rule assumes the
+   first column is the row's "name" -- true everywhere else, but this
+   table's first column is the row number, so override it back to a plain
+   ledger-numeral style and move the bold/name styling onto .loot-col-item
+   instead. */
+.theme-loot-bank .loot-table td:first-child { font-weight: normal; white-space: normal; color: var(--text-muted); }
+.theme-loot-bank .loot-table td.loot-col-item { font-weight: bold; white-space: nowrap; color: var(--text); }
 .theme-loot-bank .loot-table select[name="rarity"] {
   border-color: var(--rarity-color, var(--border));
   color: var(--rarity-color, var(--text));

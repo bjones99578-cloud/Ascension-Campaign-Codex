@@ -891,6 +891,7 @@ def loot_tracker():
         "loot.html",
         items=items,
         funds=funds,
+        funds_denominations=models.PARTY_FUNDS_DENOMINATIONS,
         total_value=total_value,
         holdings_count=len(in_possession),
         history_count=len(items) - len(in_possession),
@@ -904,12 +905,25 @@ def loot_tracker():
 def loot_funds_update():
     """Updates the party's on-hand coin totals (loose pp/gp/sp/cp, separate
     from itemized loot below) -- a single shared purse, same key/value
-    settings pattern as Bastion's overall settings."""
+    settings pattern as Bastion's overall settings. Rejects (rather than
+    silently zeroing) anything that isn't a plain non-negative whole
+    number -- request.form.get(..., type=int) would otherwise swallow a
+    parse failure (e.g. "1e3" or "1,500") into None and save 0 with no
+    indication anything went wrong."""
     conn = get_conn()
-    funds = {
-        denom: request.form.get(denom, type=int) or 0
-        for denom, _, _ in models.PARTY_FUNDS_DENOMINATIONS
-    }
+    funds = {}
+    for denom, label, _ in models.PARTY_FUNDS_DENOMINATIONS:
+        raw = request.form.get(denom, "").strip()
+        if not raw:
+            funds[denom] = 0
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            return redirect(url_for("loot_tracker", error=f"{label} ({denom}) must be a whole number."))
+        if value < 0:
+            return redirect(url_for("loot_tracker", error=f"{label} ({denom}) can't be negative."))
+        funds[denom] = value
     models.set_party_funds(conn, funds)
     return redirect(url_for("loot_tracker"))
 
