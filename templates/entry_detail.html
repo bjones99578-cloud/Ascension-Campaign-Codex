@@ -107,6 +107,30 @@
   </div>
 {% endmacro %}
 
+{% macro place_table(title, rows, empty_hint) %}
+  <div class="related-block">
+    <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
+    {% if rows %}
+      <table class="related-table">
+        <thead>
+          <tr><th>Name</th><th>Type</th><th>Summary</th></tr>
+        </thead>
+        <tbody>
+          {% for place in rows %}
+            <tr>
+              <td><a href="{{ url_for('entry_detail', entry_id=place['id']) }}">{{ place['name'] }}</a></td>
+              <td>{{ place['place_type'] or '—' }}</td>
+              <td>{{ place['summary'] or '' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty-state">{{ empty_hint }}</p>
+    {% endif %}
+  </div>
+{% endmacro %}
+
 {% macro city_table(title, rows, empty_hint) %}
   <div class="related-block">
     <div class="section-heading"><span class="section-heading-mark"></span>{{ title }}<span class="section-heading-mark"></span></div>
@@ -181,6 +205,12 @@
       {% if related_entities.organization %}
         <span><span class="relation-label">Organization:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.organization['id']) }}">{{ related_entities.organization['name'] }}</a></span>
       {% endif %}
+      {% if related_entities.place %}
+        <span><span class="relation-label">Place:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.place['id']) }}">{{ related_entities.place['name'] }}</a></span>
+      {% endif %}
+      {% if related_entities.place_city %}
+        <span><span class="relation-label">Located in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.place_city['id']) }}">{{ related_entities.place_city['name'] }}</a></span>
+      {% endif %}
       {% if related_entities.current_city %}
         <span><span class="relation-label">Currently in:</span><a href="{{ url_for('entry_detail', entry_id=related_entities.current_city['id']) }}">{{ related_entities.current_city['name'] }}</a></span>
       {% endif %}
@@ -223,11 +253,18 @@
           "No organizations yet — add [[" ~ entry['name'] ~ "]] to an organization's entry, or set it as their Headquarters City, to list it here.") }}
       {{ quest_table("Missions & Quests", related.quests_display,
           "No quests yet — add [[" ~ entry['name'] ~ "]] to a quest's entry to list it here.") }}
+      {{ place_table("Shops & Places of Interest", related.places_display,
+          "No places yet — add [[" ~ entry['name'] ~ "]] to a place's entry, or set it as their City, to list it here.") }}
     {% elif related.party_members is defined %}
       {{ character_table("Party Members", related.party_members,
           "No party members belong to this organization yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
       {{ character_table("Other Members", related.npc_members,
           "No other members yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Organization, to list them here.") }}
+    {% elif related.place_party_members is defined %}
+      {{ character_table("Party Members", related.place_party_members,
+          "No party members are attached to this place yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Place, to list them here.") }}
+      {{ character_table("Other Characters", related.place_npc_members,
+          "No other characters are attached to this place yet — add [[" ~ entry['name'] ~ "]] to a character's entry, or set it as their Place, to list them here.") }}
     {% elif related.cities_display is defined %}
       {{ city_table("Cities in this Region", related.cities_display,
           "No cities yet — add [[" ~ entry['name'] ~ "]] to a city's entry, or set it as their Region, to list it here.") }}

@@ -114,6 +114,15 @@
       </select>
     </label>
     <label>
+      Place <span class="hint">(optional — a shop, tavern, or other place of interest this Character is attached to: owner, staff, clergy, whoever)</span>
+      <select name="place">
+        <option value="">— None —</option>
+        {% for place in place_options %}
+          <option value="{{ place['id'] }}" {% if form.place_id == place['id'] %}selected{% endif %}>{{ place['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
       Current City <span class="hint">(where they are right now, if different from home — handy while the party travels)</span>
       <select name="current_city">
         <option value="">— None —</option>
@@ -170,6 +179,18 @@
         <option value="">— None —</option>
         {% for character in character_options %}
           <option value="{{ character['id'] }}" {% if form.leader_id == character['id'] %}selected{% endif %}>{{ character['name'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div class="field-group" data-show-for="Place">
+    <label>
+      City <span class="hint">(optional — which City this shop/point of interest is located in)</span>
+      <select name="city">
+        <option value="">— None —</option>
+        {% for city in city_options %}
+          <option value="{{ city['id'] }}" {% if form.city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
         {% endfor %}
       </select>
     </label>

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Regions — Ascension Campaign Codex{% endblock %}
+{% block body_class %}cat-region{% endblock %}
+{% block page_class %}theme-region-mountain{% endblock %}
+
+{% block content %}
+<div class="themed-banner ornate-frame">
+  <span class="corner-bl"></span><span class="corner-br"></span>
+  <div class="page-header">
+    <div class="themed-header-title">
+      <img class="cat-icon-lg" src="{{ url_for('static', filename='icons/region.svg') }}" alt="">
+      <h1>Regions</h1>
+    </div>
+    <a class="new-entry-btn" href="{{ url_for('new_entry', category='Region') }}">+ New Region</a>
+  </div>
+  <p class="summary">The wider map, broken down by the terrain and climate that shape each stretch of it — every City you've placed shows up here too, tallied under whichever Region it belongs to.</p>
+</div>
+
+{% if region_rows %}
+  <div class="region-range-grid">
+    {% for row in region_rows %}
+      {% set e = row.entry %}
+      <a class="region-card" href="{{ url_for('entry_detail', entry_id=e['id']) }}">
+        <div class="region-card-crest">
+          {% if e['image_filename'] %}
+            <img src="{{ url_for('uploaded_file', filename=e['image_filename']) }}" alt="">
+          {% endif %}
+        </div>
+        <div class="region-card-body">
+          <h3 class="region-card-name">{{ e['name'] }}</h3>
+          <div class="region-card-tags">
+            <span class="region-tag">{{ e['terrain'] or 'Terrain unknown' }}</span>
+            <span class="region-tag">{{ e['climate'] or 'Climate unknown' }}</span>
+          </div>
+          {% if e['summary'] %}<p class="region-card-summary">{{ e['summary'] }}</p>{% endif %}
+        </div>
+        <div class="region-card-footer">
+          <span class="region-card-citycount">
+            <strong>{{ row.city_count }}</strong> {{ 'city' if row.city_count == 1 else 'cities' }}
+          </span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="empty-state">No regions yet. <a href="{{ url_for('new_entry', category='Region') }}">Add the first one</a>.</p>
+{% endif %}
+{% endblock %}

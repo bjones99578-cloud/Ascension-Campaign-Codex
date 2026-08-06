@@ -38,6 +38,11 @@
      door-plaque nameplate, same "one page, one accent, used sparingly"
      reasoning as --font-sport/--font-ledger. */
   --font-nautical: "Pirata One", "Cinzel", serif;
+  /* Used only by the Regions listing's "mountain" theme below -- a
+     chiseled, engraved-stone display face for each region's card name,
+     same "one page, one accent, used sparingly" reasoning as
+     --font-sport/--font-ledger/--font-nautical. */
+  --font-carved: "Metamorphous", "Cinzel", serif;
 
   /* Default category theme = the site's own gold, used wherever no specific
      category context applies (mixed listings, utility pages). */
@@ -59,6 +64,7 @@
 .cat-city         { --cat-color: #a9782f; --cat-light: #8a5f18; --cat-glow: rgba(169, 120, 47, 0.28); }
 .cat-character    { --cat-color: #6b4ba1; --cat-light: #56398a; --cat-glow: rgba(107, 75, 161, 0.28); }
 .cat-organization { --cat-color: #9c3b4f; --cat-light: #7d2c3d; --cat-glow: rgba(156, 59, 79, 0.28); }
+.cat-place        { --cat-color: #3d6b8f; --cat-light: #2c4f6b; --cat-glow: rgba(61, 107, 143, 0.28); }
 .cat-bastion      { --cat-color: #1f7a72; --cat-light: #145f58; --cat-glow: rgba(31, 122, 114, 0.28); }
 .cat-item         { --cat-color: #a8611f; --cat-light: #8a4d16; --cat-glow: rgba(168, 97, 31, 0.28); }
 .cat-quest        { --cat-color: #4b4a9c; --cat-light: #38377a; --cat-glow: rgba(75, 74, 156, 0.28); }
@@ -1393,6 +1399,86 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
 .project-counter-form input { width: 5rem; }
 
 .project-add-form { margin: 0.5rem 0 1rem; }
+
+/* ---------- regions ---------- */
+/* The Regions listing's own card grid, split out of the generic
+   category.html table (see region.html / app.py's category_view) so it
+   can carry real per-card structure -- a crest banner, terrain/climate
+   tags, and a city-count tally pulled from every City that points at this
+   Region -- instead of one more row in a plain table. */
+
+.region-range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1.25rem;
+}
+.region-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.region-card:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18); }
+.region-card-crest {
+  height: 7rem;
+  flex-shrink: 0;
+}
+.region-card-crest img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.region-card-body {
+  padding: 1rem 1.1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.region-card-name { margin: 0; font-size: 1.15rem; color: var(--cat-color); }
+.region-card-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.region-tag {
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--cat-color);
+  color: var(--cat-light);
+}
+.region-card-summary { margin: 0; color: var(--text-muted); font-size: 0.9rem; line-height: 1.45; flex: 1; }
+.region-card-footer {
+  padding: 0.6rem 1.1rem;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.region-card-citycount strong { color: var(--cat-color); font-size: 1rem; }
+
+/* ---------- Regions: mountain theme ---------- */
+/* Same "reskin the opaque, working elements only" rule as every other
+   themed tab: only the crest strip at the top of each card -- a single
+   self-contained decorative banner, image or not -- gets the full
+   granite-and-snowcap treatment via a jagged clip-path skyline. The card
+   body underneath stays on the site's normal parchment card background,
+   so the summary text and tags keep their usual light-background contrast. */
+
+.theme-region-mountain .region-card-crest {
+  background: linear-gradient(180deg, #eef2f5 0%, #c9d0d6 22%, #8b95a1 55%, #4c5560 100%);
+  clip-path: polygon(
+    0% 100%, 0% 62%, 9% 38%, 18% 55%, 29% 18%, 40% 48%,
+    52% 26%, 63% 52%, 74% 30%, 85% 50%, 100% 20%, 100% 100%
+  );
+}
+.theme-region-mountain .region-card-crest img { filter: brightness(0.82) saturate(1.05); }
+.theme-region-mountain .region-card { border-color: var(--cat-color); }
+.theme-region-mountain .region-card:hover { box-shadow: 0 10px 22px var(--cat-glow); }
+.theme-region-mountain .region-card-name {
+  font-family: var(--font-carved);
+  letter-spacing: 0.02em;
+}
 
 /* ---------- timeline ---------- */
 

@@ -76,12 +76,13 @@ def get_conn():
 
 def relationship_options(conn):
     """Option lists for the Home City / Organization / Region / Headquarters
-    City / Leader dropdowns on the entry form."""
+    City / Leader / Place dropdowns on the entry form."""
     return {
         "city_options": models.list_entries(conn, category="City"),
         "organization_options": models.list_entries(conn, category="Organization"),
         "region_options": models.list_entries(conn, category="Region"),
         "character_options": models.list_entries(conn, category="Character"),
+        "place_options": models.list_entries(conn, category="Place"),
     }
 
 
@@ -193,6 +194,17 @@ def category_view(category):
     if category not in models.CATEGORIES:
         return redirect(url_for("index"))
     entries = models.list_entries(conn, category=category)
+
+    if category == "Region":
+        # Its own dedicated template (region.html) rather than a branch
+        # inside category.html, same split Map/Party Roster/Loot Tracker
+        # already got -- see region.html for the "mountain" restructuring.
+        region_rows = [
+            {"entry": e, "city_count": len(models.get_cities_in_region(conn, e["id"]))}
+            for e in entries
+        ]
+        return render_template("region.html", category=category, entries=entries, region_rows=region_rows)
+
     if category == "SessionLog":
         # A session log reads best in chronological order, most recent
         # first -- not the alphabetical-by-name order every other category
@@ -229,6 +241,9 @@ def category_view(category):
     elif category == "Item":
         holders = models.get_entries_by_ids(conn, [e["current_holder_id"] for e in entries])
         related_names = {e["id"]: {"current_holder": holders.get(e["current_holder_id"])} for e in entries}
+    elif category == "Place":
+        cities = models.get_entries_by_ids(conn, [e["city_id"] for e in entries])
+        related_names = {e["id"]: {"city": cities.get(e["city_id"])} for e in entries}
 
     return render_template(
         "category.html",
@@ -321,15 +336,22 @@ def entry_detail(entry_id):
             models.get_entry(conn, b["id"]) for b in all_backlinks if b["category"] == "Quest"
         ]
 
+        place_stubs = models.merge_by_id(
+            models.get_places_in_city(conn, entry_id),
+            [b for b in all_backlinks if b["category"] == "Place"],
+        )
+        places_display = [models.get_entry(conn, row["id"]) for row in place_stubs]
+
         related = {
             "party_characters": party_characters,
             "npc_characters": npc_characters,
             "factions_display": factions_display,
             "quests_display": quests_display,
+            "places_display": places_display,
         }
         backlinks = [
             b for b in all_backlinks
-            if b["category"] not in ("Character", "Organization", "Quest")
+            if b["category"] not in ("Character", "Organization", "Quest", "Place")
         ]
     elif entry["category"] == "Organization":
         member_stubs = models.merge_by_id(
@@ -342,6 +364,19 @@ def entry_detail(entry_id):
         related = {
             "party_members": party_members,
             "npc_members": npc_members,
+        }
+        backlinks = [b for b in all_backlinks if b["category"] != "Character"]
+    elif entry["category"] == "Place":
+        member_stubs = models.merge_by_id(
+            models.get_characters_in_place(conn, entry_id),
+            [b for b in all_backlinks if b["category"] == "Character"],
+        )
+        members = [models.get_entry(conn, row["id"]) for row in member_stubs]
+        place_party_members, place_npc_members = models.split_party_members(members)
+
+        related = {
+            "place_party_members": place_party_members,
+            "place_npc_members": place_npc_members,
         }
         backlinks = [b for b in all_backlinks if b["category"] != "Character"]
     elif entry["category"] == "Region":
@@ -371,6 +406,8 @@ def entry_detail(entry_id):
             related_entities["home_city"] = models.get_entry(conn, entry["home_city_id"])
         if entry["organization_id"]:
             related_entities["organization"] = models.get_entry(conn, entry["organization_id"])
+        if entry["place_id"]:
+            related_entities["place"] = models.get_entry(conn, entry["place_id"])
         if entry["current_city_id"]:
             related_entities["current_city"] = models.get_entry(conn, entry["current_city_id"])
     elif entry["category"] == "City":
@@ -388,6 +425,9 @@ def entry_detail(entry_id):
     elif entry["category"] == "Item":
         if entry["current_holder_id"]:
             related_entities["current_holder"] = models.get_entry(conn, entry["current_holder_id"])
+    elif entry["category"] == "Place":
+        if entry["city_id"]:
+            related_entities["place_city"] = models.get_entry(conn, entry["city_id"])
 
     # Personal crafting/downtime projects are a Player Character thing only
     # (an NPC has no "party member" tracking anything for themselves) --
@@ -429,6 +469,8 @@ def new_entry():
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
+        place_id = _parse_relationship_id(request.form.get("place"))
+        city_id = _parse_relationship_id(request.form.get("city"))
         pc_slot = _parse_pc_slot(conn, request.form)
         details = parse_detail_fields(request.form)
         _persist_custom_options(conn, details)
@@ -456,6 +498,8 @@ def new_entry():
                     "leader_id": leader_id,
                     "current_city_id": current_city_id,
                     "leading_organization_id": leading_organization_id,
+                    "place_id": place_id,
+                    "city_id": city_id,
                     "pc_slot": pc_slot,
                     **details,
                 },
@@ -482,6 +526,7 @@ def new_entry():
             leader_id=leader_id, current_city_id=current_city_id,
             leading_organization_id=leading_organization_id,
             current_holder_id=current_holder_id,
+            place_id=place_id, city_id=city_id,
             pc_slot=pc_slot,
             details=details,
         )
@@ -512,6 +557,8 @@ def new_entry():
             "current_city_id": None,
             "leading_organization_id": None,
             "current_holder_id": None,
+            "place_id": None,
+            "city_id": None,
             "pc_slot": prefill_slot,
             **prefill_details,
         },
@@ -556,6 +603,8 @@ def import_dndbeyond():
                         "current_city_id": None,
                         "leading_organization_id": None,
                         "current_holder_id": None,
+                        "place_id": None,
+                        "city_id": None,
                                     "pc_slot": None,
                         **{**models.empty_details(), **fields.get("details", {})},
                     },
@@ -588,6 +637,8 @@ def edit_entry(entry_id):
         current_city_id = _parse_relationship_id(request.form.get("current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
+        place_id = _parse_relationship_id(request.form.get("place"))
+        city_id = _parse_relationship_id(request.form.get("city"))
         pc_slot = _parse_pc_slot(conn, request.form, ignore_entry_id=entry_id)
         details = parse_detail_fields(request.form)
         _persist_custom_options(conn, details)
@@ -619,6 +670,8 @@ def edit_entry(entry_id):
                     "current_city_id": current_city_id,
                     "leading_organization_id": leading_organization_id,
                     "current_holder_id": current_holder_id,
+                    "place_id": place_id,
+                    "city_id": city_id,
                     "pc_slot": pc_slot,
                     **details,
                 },
@@ -637,6 +690,7 @@ def edit_entry(entry_id):
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
                 current_holder_id=current_holder_id,
+                place_id=place_id, city_id=city_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -650,6 +704,7 @@ def edit_entry(entry_id):
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
                 current_holder_id=current_holder_id,
+                place_id=place_id, city_id=city_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -661,6 +716,7 @@ def edit_entry(entry_id):
                 leader_id=leader_id, current_city_id=current_city_id,
                 leading_organization_id=leading_organization_id,
                 current_holder_id=current_holder_id,
+                place_id=place_id, city_id=city_id,
                 pc_slot=pc_slot,
                 details=details,
             )
@@ -687,6 +743,8 @@ def edit_entry(entry_id):
             "current_city_id": entry["current_city_id"],
             "leading_organization_id": entry["leading_organization_id"],
             "current_holder_id": entry["current_holder_id"],
+            "place_id": entry["place_id"],
+            "city_id": entry["city_id"],
             "pc_slot": entry["pc_slot"],
             **{col: entry[col] for col in models.DETAIL_COLUMNS},
         },

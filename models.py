@@ -21,6 +21,7 @@ CATEGORIES = [
     "City",
     "Character",
     "Organization",
+    "Place",
     "Item",
     "Quest",
     "SessionLog",
@@ -31,6 +32,7 @@ CATEGORY_PLURALS = {
     "City": "Cities",
     "Character": "Characters",
     "Organization": "Organizations",
+    "Place": "Places",
     "Item": "Items",
     "Quest": "Quests",
     "SessionLog": "Session Logs",
@@ -54,16 +56,21 @@ LINK_PATTERN = re.compile(r"\[\[([^\[\]|]+)(?:\|([^\[\]]+))?\]\]")
 # Columns that hold an explicit, dropdown-selected relationship to another
 # entry (as opposed to relationships inferred from [[wiki links]] in prose).
 # Each is nullable and only meaningful for entries of a particular category:
-#   home_city_id, organization_id, current_city_id -> Character
+#   home_city_id, organization_id, place_id, current_city_id -> Character
 #   region_id, leading_organization_id             -> City
 #   headquarters_city_id, leader_id -> Organization (leader_id points at a Character)
 #   leader_id is also reused by City, for the same reason "alignment" is
 #   shared by Character and Organization -- it's the same concept ("the
 #   Character who leads this") regardless of which category it's attached to.
 #   current_holder_id -> Item (which Character is currently carrying it)
+#   city_id -> Place (which City this shop/point of interest is located in --
+#   same concept as Organization's headquarters_city_id, just a different
+#   column since a Place and an Organization headquartered in the same City
+#   are independent facts, not one shared relationship)
 RELATIONSHIP_COLUMNS = (
     "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
     "current_city_id", "leading_organization_id", "current_holder_id",
+    "place_id", "city_id",
 )
 
 # Party roster: a fixed 5-slot lineup of Player Characters, managed separately
@@ -187,6 +194,10 @@ ORG_TYPE_OPTIONS = [
     "Secret Society", "Cult", "Other",
 ]
 
+PLACE_TYPE_OPTIONS = [
+    "Shop", "Tavern/Inn", "Temple/Shrine", "Guildhall", "Landmark", "Other",
+]
+
 TERRAIN_OPTIONS = [
     "Forest", "Mountains", "Desert", "Swamp", "Plains/Grassland",
     "Coastal", "Arctic/Tundra", "Underdark", "Urban", "Mixed", "Other",
@@ -278,6 +289,16 @@ DETAIL_FIELDS = {
     "Region": [
         {"name": "terrain", "label": "Terrain", "type": "select", "options": TERRAIN_OPTIONS},
         {"name": "climate", "label": "Climate", "type": "select", "options": CLIMATE_OPTIONS},
+    ],
+    "Place": [
+        # A single category for both "shops" and "places of interest" --
+        # one Place Type dropdown covers both, same as how Organization's
+        # own org_type dropdown covers guilds/cults/noble houses/etc under
+        # one category rather than a separate one per kind. City (which
+        # City it's in) and Characters (who's attached to it -- an owner,
+        # staff, clergy, whoever) live on the relationship dropdowns below,
+        # same as every other cross-entry link in this app.
+        {"name": "place_type", "label": "Place Type", "type": "select", "options": PLACE_TYPE_OPTIONS},
     ],
     "Item": [
         {"name": "item_type", "label": "Item Type", "type": "select", "options": ITEM_TYPE_OPTIONS},
@@ -437,6 +458,8 @@ def init_db():
             leader_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             current_city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             leading_organization_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            place_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
+            city_id INTEGER REFERENCES entry (id) ON DELETE SET NULL,
             pc_slot INTEGER,
             {detail_column_defs},
             created_at TEXT NOT NULL,
@@ -936,6 +959,22 @@ def get_organizations_in_city(conn, city_id):
     ).fetchall()
 
 
+def get_places_in_city(conn, city_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Place' AND city_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (city_id,),
+    ).fetchall()
+
+
+def get_characters_in_place(conn, place_id):
+    return conn.execute(
+        "SELECT id, name, category, summary FROM entry "
+        "WHERE category = 'Character' AND place_id = ? ORDER BY name COLLATE NOCASE ASC",
+        (place_id,),
+    ).fetchall()
+
+
 def get_cities_in_region(conn, region_id):
     return conn.execute(
         "SELECT id, name, category, summary FROM entry "
@@ -1396,7 +1435,7 @@ def get_player_characters(conn):
 def create_entry(conn, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
                   leader_id=None, current_city_id=None, leading_organization_id=None,
-                  current_holder_id=None,
+                  current_holder_id=None, place_id=None, city_id=None,
                   pc_slot=None, details=None):
     """details: dict mapping a DETAIL_COLUMNS column name to its value (or None) —
     the typical D&D fields (Species, Class, Alignment, etc.) relevant to whichever
@@ -1408,13 +1447,13 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
     base_cols = [
         "name", "category", "summary", "content", "author", "image_filename",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "leading_organization_id", "current_holder_id",
+        "current_city_id", "leading_organization_id", "current_holder_id", "place_id", "city_id",
         "pc_slot", "created_at", "updated_at",
     ]
     base_vals = [
         name.strip(), category, summary.strip(), content, author.strip(), image_filename,
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, leading_organization_id, current_holder_id,
+        current_city_id, leading_organization_id, current_holder_id, place_id, city_id,
         pc_slot, ts, ts,
     ]
     all_cols = base_cols + DETAIL_COLUMNS
@@ -1439,7 +1478,7 @@ def create_entry(conn, name, category, summary, content, author, image_filename=
 def update_entry(conn, entry_id, name, category, summary, content, author, image_filename=None,
                   home_city_id=None, organization_id=None, region_id=None, headquarters_city_id=None,
                   leader_id=None, current_city_id=None, leading_organization_id=None,
-                  current_holder_id=None,
+                  current_holder_id=None, place_id=None, city_id=None,
                   pc_slot=None, details=None):
     """image_filename: pass a new filename to replace the image, or omit/None to
     leave whatever image is already set untouched (use clear_entry_image to remove it).
@@ -1455,13 +1494,13 @@ def update_entry(conn, entry_id, name, category, summary, content, author, image
     set_cols = [
         "name", "category", "summary", "content", "author",
         "home_city_id", "organization_id", "region_id", "headquarters_city_id", "leader_id",
-        "current_city_id", "leading_organization_id", "current_holder_id",
+        "current_city_id", "leading_organization_id", "current_holder_id", "place_id", "city_id",
         "pc_slot",
     ]
     set_vals = [
         name.strip(), category, summary.strip(), content, author.strip(),
         home_city_id, organization_id, region_id, headquarters_city_id, leader_id,
-        current_city_id, leading_organization_id, current_holder_id,
+        current_city_id, leading_organization_id, current_holder_id, place_id, city_id,
         pc_slot,
     ]
     if image_filename is not None:
