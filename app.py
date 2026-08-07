@@ -9,6 +9,7 @@ import bastion
 import dndbeyond
 import images
 import models
+import relationship_web
 import updater
 from rendering import render_wiki_content
 
@@ -437,6 +438,31 @@ def entry_detail(entry_id):
     if entry["category"] == "Character" and entry["is_player_character"] == "Yes":
         projects = models.get_projects(conn, "character", entry_id)
 
+    gallery_images = models.get_gallery_images(conn, entry_id)
+
+    # Every entry directly connected to this one -- via its own outgoing
+    # relationship dropdowns (Home City, Organization, etc.), via any other
+    # entry's relationship dropdown pointing back at it (Home City, City,
+    # etc.), or via a [[wiki link]] either direction -- deduped by id, for
+    # the Relationship Web visualization. Reuses all_backlinks (computed
+    # above, before any category branch narrowed it down to just
+    # "backlinks") rather than re-querying.
+    connected_by_id = {}
+    for col in models.RELATIONSHIP_COLUMNS:
+        target_id = entry[col]
+        if target_id:
+            target = models.get_entry(conn, target_id)
+            if target:
+                connected_by_id[target["id"]] = target
+    for ref in models.get_entries_referencing(conn, entry_id):
+        connected_by_id[ref["id"]] = ref
+    for b in all_backlinks:
+        if b["id"] not in connected_by_id:
+            full = models.get_entry(conn, b["id"])
+            if full:
+                connected_by_id[full["id"]] = full
+    web = relationship_web.build_web(entry, list(connected_by_id.values()))
+
     return render_template(
         "entry_detail.html",
         entry=entry,
@@ -445,6 +471,8 @@ def entry_detail(entry_id):
         related=related,
         related_entities=related_entities,
         projects=projects,
+        gallery_images=gallery_images,
+        web=web,
     )
 
 
@@ -758,8 +786,32 @@ def delete_entry_route(entry_id):
     entry = models.get_entry(conn, entry_id)
     if entry and entry["image_filename"]:
         images.delete_upload(entry["image_filename"])
+    for gallery_image in models.get_gallery_images(conn, entry_id):
+        images.delete_upload(gallery_image["filename"])
     models.delete_entry(conn, entry_id)
     return redirect(url_for("index"))
+
+
+@app.route("/entry/<int:entry_id>/gallery", methods=["POST"])
+def entry_gallery_add(entry_id):
+    conn = get_conn()
+    entry = models.get_entry(conn, entry_id)
+    if entry is None:
+        return render_template("not_found.html"), 404
+    filename = images.save_upload(request.files.get("image"))
+    if filename:
+        caption = (request.form.get("caption") or "").strip() or None
+        models.add_gallery_image(conn, entry_id, filename, caption)
+    return redirect(url_for("entry_detail", entry_id=entry_id))
+
+
+@app.route("/entry/<int:entry_id>/gallery/<int:image_id>/delete", methods=["POST"])
+def entry_gallery_delete(entry_id, image_id):
+    conn = get_conn()
+    filename = models.delete_gallery_image(conn, image_id)
+    if filename:
+        images.delete_upload(filename)
+    return redirect(url_for("entry_detail", entry_id=entry_id))
 
 
 @app.route("/city-view")
@@ -1295,20 +1347,17 @@ def project_delete(project_id):
 def timeline():
     """The campaign's story so far, as a single chronological feed: every
     Session Log entry in play order (earliest first -- a timeline reads like
-    a history, not a most-recent-first activity log), each one showing
-    whichever Characters/Cities/Quests/etc. its write-up actually mentions
-    via [[wiki links]]. No separate "what happened this session" field to
-    maintain -- it's derived straight from the links already in the log
-    entry's own content."""
+    a history, not a most-recent-first activity log), plus any Quest that's
+    been given a Campaign Day # (see models.get_timeline_entries), each one
+    showing whichever Characters/Cities/Quests/etc. its write-up actually
+    mentions via [[wiki links]]. No separate "what happened this session"
+    field to maintain -- it's derived straight from the links already in
+    the entry's own content."""
     conn = get_conn()
-    sessions = models.list_entries(conn, category="SessionLog")
-    sessions = sorted(
-        sessions,
-        key=lambda e: (e["session_date"] or "", e["session_number"] or 0, e["id"]),
-    )
+    entries = models.get_timeline_entries(conn)
     timeline_entries = [
-        {"session": s, "mentions": models.get_outgoing_links(conn, s["id"])}
-        for s in sessions
+        {"entry": e, "mentions": models.get_outgoing_links(conn, e["id"])}
+        for e in entries
     ]
     return render_template("timeline.html", timeline_entries=timeline_entries)
 

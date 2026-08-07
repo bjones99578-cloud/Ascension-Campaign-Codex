@@ -241,6 +241,35 @@
     {{ rendered | safe }}
   </div>
 
+  <div class="divider"><span class="divider-mark"></span></div>
+  <div class="related-block entry-gallery-block">
+    <div class="section-heading"><span class="section-heading-mark"></span>Gallery<span class="section-heading-mark"></span></div>
+    {% if gallery_images %}
+      <div class="entry-gallery-grid">
+        {% for img in gallery_images %}
+          <figure class="entry-gallery-item">
+            <a href="{{ url_for('uploaded_file', filename=img['filename']) }}" target="_blank" rel="noopener">
+              <img src="{{ url_for('uploaded_file', filename=img['filename']) }}" alt="{{ img['caption'] or entry['name'] }}">
+            </a>
+            {% if img['caption'] %}<figcaption>{{ img['caption'] }}</figcaption>{% endif %}
+            <form method="post" action="{{ url_for('entry_gallery_delete', entry_id=entry['id'], image_id=img['id']) }}"
+                  class="entry-gallery-delete-form" onsubmit="return confirm('Remove this picture from the gallery?');">
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </figure>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">No extra pictures yet — add one below.</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('entry_gallery_add', entry_id=entry['id']) }}"
+          enctype="multipart/form-data" class="entry-gallery-add-form">
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp" required>
+      <input type="text" name="caption" placeholder="Caption (optional)">
+      <button type="submit" class="btn btn-primary btn-sm">+ Add Picture</button>
+    </form>
+  </div>
+
   {% if related %}
     <div class="divider"><span class="divider-mark"></span></div>
 
@@ -287,6 +316,30 @@
         <p class="empty-state">No personal projects yet — start one below.</p>
       {% endif %}
       {{ pw.project_add_form('character', entry['id'], url_for('entry_detail', entry_id=entry['id'])) }}
+    </div>
+  {% endif %}
+
+  {% if web %}
+    <div class="divider"><span class="divider-mark"></span></div>
+    <div class="related-block relationship-web-block">
+      <div class="section-heading"><span class="section-heading-mark"></span>Relationship Web<span class="section-heading-mark"></span></div>
+      <svg class="relationship-web-svg" viewBox="0 0 {{ web.size }} {{ web.size }}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{{ entry['name'] }}'s relationship web">
+        {% for node in web.nodes %}
+          <line class="relationship-web-edge" x1="{{ web.center_x }}" y1="{{ web.center_y }}" x2="{{ node.x }}" y2="{{ node.y }}"></line>
+        {% endfor %}
+        <g class="relationship-web-node relationship-web-center cat-{{ entry['category'].lower() }}">
+          <title>{{ web.center_full_name }}</title>
+          <circle cx="{{ web.center_x }}" cy="{{ web.center_y }}" r="20"></circle>
+          <text x="{{ web.center_x }}" y="{{ web.center_y + 34 }}" text-anchor="middle">{{ web.center_display_name }}</text>
+        </g>
+        {% for node in web.nodes %}
+          <a href="{{ url_for('entry_detail', entry_id=node.id) }}" class="relationship-web-node cat-{{ node.category.lower() }}">
+            <title>{{ node.full_name }} ({{ category_labels.get(node.category, node.category) }})</title>
+            <circle cx="{{ node.x }}" cy="{{ node.y }}" r="14"></circle>
+            <text x="{{ node.x }}" y="{{ node.y + 28 }}" text-anchor="middle">{{ node.display_name }}</text>
+          </a>
+        {% endfor %}
+      </svg>
     </div>
   {% endif %}
 

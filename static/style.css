@@ -566,6 +566,79 @@ code {
   display: block;
 }
 
+/* ---------- entry gallery ---------- */
+/* Extra pictures beyond the one cover image_filename (portrait, chronicle
+   card thumb, etc. all still come from that single field elsewhere in the
+   app -- this grid is purely additive, only ever shown on the entry's own
+   page). */
+.entry-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.entry-gallery-item {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.entry-gallery-item a { display: block; }
+.entry-gallery-item img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+.entry-gallery-item figcaption {
+  padding: 0.4rem 0.6rem 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.entry-gallery-delete-form { padding: 0.4rem 0.6rem 0.6rem; }
+.entry-gallery-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.entry-gallery-add-form input[type="text"] { flex: 1; min-width: 10rem; }
+
+/* ---------- relationship web ---------- */
+/* A per-entry radial graph of everything directly connected to it -- see
+   relationship_web.py for the layout math. Plain inline SVG (no JS graph
+   library, no build step), colored per node via the same --cat-* custom
+   properties every other themed element uses, since each node's <a>/<g>
+   carries its own cat-<category> class and CSS custom properties cascade
+   normally through SVG the same as through HTML. */
+.relationship-web-svg {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto;
+}
+.relationship-web-edge {
+  stroke: var(--border-soft);
+  stroke-width: 1.5;
+}
+.relationship-web-node circle {
+  fill: var(--cat-color);
+  stroke: var(--bg-card);
+  stroke-width: 2;
+}
+.relationship-web-node text {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  fill: var(--text);
+}
+.relationship-web-center circle { fill: var(--cat-light); }
+.relationship-web-center text { font-weight: bold; }
+a.relationship-web-node { cursor: pointer; }
+a.relationship-web-node:hover circle { stroke: var(--cat-light); stroke-width: 3; }
+a.relationship-web-node:hover text { fill: var(--cat-color); font-weight: bold; }
+
 /* The entry write-up itself is deliberately treated as its own "page" laid
    into the surrounding site chrome -- a subtle vellum grain (blended rather
    than just a flat fill), a colored illuminated drop-cap on the first
@@ -1523,6 +1596,10 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
   color: var(--text-muted);
 }
 .timeline-date-ingame { font-style: italic; }
+.timeline-date-day {
+  font-weight: bold;
+  color: var(--cat-color);
+}
 .timeline-card h2 { margin: 0.2rem 0 0.3rem; }
 .timeline-mentions {
   display: flex;

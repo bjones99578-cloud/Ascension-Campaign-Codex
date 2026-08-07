@@ -321,6 +321,14 @@ DETAIL_FIELDS = {
         {"name": "level_range", "label": "Level Range", "type": "text"},
         {"name": "xp_reward", "label": "XP Reward", "type": "number", "min": 0},
         {"name": "gold_reward", "label": "Gold Reward (gp)", "type": "number", "min": 0},
+        # Same freeform in-fiction date concept as SessionLog's in_game_date
+        # below (shared column, same reasoning as "disposition" being shared
+        # by City/Organization) -- lets a Quest carry a date at all, which it
+        # had no concept of before. in_game_day is the campaign-day number
+        # that actually drives Timeline ordering (see get_timeline_entries);
+        # in_game_date stays the free-text label actually shown.
+        {"name": "in_game_date", "label": "In-Game Date", "type": "text"},
+        {"name": "in_game_day", "label": "Campaign Day #", "type": "number", "min": 0},
     ],
     "SessionLog": [
         {"name": "session_number", "label": "Session #", "type": "number", "min": 1},
@@ -333,6 +341,12 @@ DETAIL_FIELDS = {
         # Gregorian calendar, so this stays flexible instead of forcing a
         # format that wouldn't fit most settings.
         {"name": "in_game_date", "label": "In-Game Date", "type": "text"},
+        # Optional plain integer "day N since the campaign began" -- purely a
+        # sort key so Session Logs and Quests can share one chronological
+        # Timeline (see get_timeline_entries) without this app having to
+        # understand any particular fictional calendar's months/leap years.
+        # Leave blank and a Session Log still sorts by Session Date as before.
+        {"name": "in_game_day", "label": "Campaign Day #", "type": "number", "min": 0},
     ],
 }
 
@@ -345,6 +359,7 @@ DETAIL_COLUMNS = sorted({f["name"] for fields in DETAIL_FIELDS.values() for f in
 DETAIL_INT_COLUMNS = {
     "level", "population", "armor_class", "hit_points", "speed", "passive_perception",
     "estimated_value", "xp_reward", "gold_reward", "session_number", "quantity",
+    "in_game_day",
 }
 
 # field name -> its built-in option list, used to tell a genuinely new custom
@@ -480,6 +495,20 @@ def init_db():
             value TEXT
         );
 
+        -- An entry's optional picture gallery, separate from its single
+        -- cover image_filename (which stays the one shown everywhere else --
+        -- nav thumbnails, chronicle cards, map pin hovers, search results --
+        -- so none of that code has to learn about "which image is primary").
+        -- Purely additive: only ever rendered on the entry's own detail page.
+        CREATE TABLE IF NOT EXISTS entry_image (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
+            filename TEXT NOT NULL,
+            caption TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS custom_option (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             field_name TEXT NOT NULL,
@@ -566,6 +595,7 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_custom_option_field ON custom_option (field_name);
         CREATE INDEX IF NOT EXISTS idx_map_pin_entry ON map_pin (entry_id);
         CREATE INDEX IF NOT EXISTS idx_project_owner ON project (owner_type, owner_id);
+        CREATE INDEX IF NOT EXISTS idx_entry_image_entry ON entry_image (entry_id);
         """
     )
     # Lightweight migrations for databases created before these columns existed.
@@ -935,6 +965,21 @@ def get_backlinks(conn, entry_id):
     ).fetchall()
 
 
+def get_entries_referencing(conn, entry_id):
+    """Every entry with ANY relationship-dropdown column (RELATIONSHIP_COLUMNS)
+    pointing at this one -- every Character whose Home City/Organization/Place
+    is this entry, every Place/Organization whose City is this entry, etc. --
+    regardless of which specific column connects them. Deliberately broader
+    than the various get_characters_in_city-style helpers used elsewhere
+    (each of which only covers the one relationship its own page cares
+    about); this is used by the Relationship Web (relationship_web.py),
+    which wants every direct connection in one place."""
+    conditions = " OR ".join(f"{col} = ?" for col in RELATIONSHIP_COLUMNS)
+    sql = f"SELECT * FROM entry WHERE ({conditions}) AND id != ?"
+    params = [entry_id] * len(RELATIONSHIP_COLUMNS) + [entry_id]
+    return conn.execute(sql, params).fetchall()
+
+
 def get_characters_in_city(conn, city_id):
     return conn.execute(
         "SELECT id, name, category, summary FROM entry "
@@ -993,6 +1038,44 @@ def get_items_held_by(conn, character_id):
         "WHERE category = 'Item' AND current_holder_id = ? ORDER BY name COLLATE NOCASE ASC",
         (character_id,),
     ).fetchall()
+
+
+def add_gallery_image(conn, entry_id, filename, caption=None):
+    ts = now_iso()
+    next_order = conn.execute(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM entry_image WHERE entry_id = ?", (entry_id,)
+    ).fetchone()[0]
+    conn.execute(
+        "INSERT INTO entry_image (entry_id, filename, caption, sort_order, created_at) VALUES (?, ?, ?, ?, ?)",
+        (entry_id, filename, caption, next_order, ts),
+    )
+    conn.commit()
+
+
+def get_gallery_images(conn, entry_id):
+    return conn.execute(
+        "SELECT id, entry_id, filename, caption, sort_order, created_at FROM entry_image "
+        "WHERE entry_id = ? ORDER BY sort_order ASC, id ASC",
+        (entry_id,),
+    ).fetchall()
+
+
+def get_gallery_image(conn, image_id):
+    return conn.execute(
+        "SELECT id, entry_id, filename, caption, sort_order, created_at FROM entry_image WHERE id = ?",
+        (image_id,),
+    ).fetchone()
+
+
+def delete_gallery_image(conn, image_id):
+    """Returns the deleted row's filename (so the caller can also remove the
+    file itself via images.delete_upload), or None if it didn't exist."""
+    row = get_gallery_image(conn, image_id)
+    if row is None:
+        return None
+    conn.execute("DELETE FROM entry_image WHERE id = ?", (image_id,))
+    conn.commit()
+    return row["filename"]
 
 
 DEFAULT_CHARACTER_PIN_SYMBOL = "★"
@@ -1136,6 +1219,35 @@ def get_outgoing_links(conn, entry_id):
         """,
         (entry_id,),
     ).fetchall()
+
+
+def get_timeline_entries(conn):
+    """Every SessionLog (always) plus every Quest that has opted into the
+    shared Timeline by setting a Campaign Day # (in_game_day) -- a Quest
+    with no Campaign Day # has no well-defined position and is left off the
+    Timeline entirely, same as it always has been for Quests (which never
+    appeared here before at all).
+
+    Sort key: an entry with a Campaign Day # sorts by that number, so
+    Session Logs and Quests can interleave on one chronological feed
+    without this app having to understand any particular fictional
+    calendar. An entry without one (an older Session Log logged before this
+    field existed, most likely) falls back to sorting by its real-world
+    Session Date instead, same as the Timeline always did -- but always
+    *after* every day-numbered entry, since there's no way to know where an
+    un-numbered entry truly falls relative to numbered ones. Backfill a
+    Campaign Day # onto old Session Logs to interleave them properly."""
+    sessions = list_entries(conn, category="SessionLog")
+    quests = [q for q in list_entries(conn, category="Quest") if q["in_game_day"] is not None]
+    rows = list(sessions) + quests
+
+    def sort_key(e):
+        if e["in_game_day"] is not None:
+            return (0, e["in_game_day"], e["id"])
+        return (1, e["session_date"] or "", e["session_number"] or 0, e["id"])
+
+    rows.sort(key=sort_key)
+    return rows
 
 
 def get_shared_loot_items(conn):

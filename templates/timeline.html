@@ -10,23 +10,29 @@
       <h1>Campaign Timeline</h1>
     </div>
   </div>
-  <p class="summary">The story so far, one session at a time, in play order. Each entry shows whichever Characters, Cities, Quests, and other entries that session's write-up mentions.</p>
+  <p class="summary">The story so far, in play order. Every Session Log appears here automatically; a Quest joins the same timeline once it's given a Campaign Day # (on its own entry page), letting the two interleave — a Quest without one still exists, it just isn't dated yet.</p>
 </div>
 
 {% if timeline_entries %}
   <div class="timeline">
     {% for te in timeline_entries %}
-      {% set s = te.session %}
+      {% set e = te.entry %}
       <div class="timeline-entry">
         <div class="timeline-marker"></div>
         <div class="timeline-card">
           <div class="timeline-card-header">
-            {% if s['session_number'] %}<span class="tag cat-sessionlog">Session {{ s['session_number'] }}</span>{% endif %}
-            {% if s['session_date'] %}<span class="timeline-date">{{ s['session_date'] }}</span>{% endif %}
-            {% if s['in_game_date'] %}<span class="timeline-date timeline-date-ingame">{{ s['in_game_date'] }}</span>{% endif %}
+            {% if e['category'] == 'SessionLog' %}
+              {% if e['session_number'] %}<span class="tag cat-sessionlog">Session {{ e['session_number'] }}</span>{% endif %}
+              {% if e['session_date'] %}<span class="timeline-date">{{ e['session_date'] }}</span>{% endif %}
+            {% else %}
+              <span class="tag cat-quest">Quest</span>
+              {% if e['quest_status'] %}<span class="timeline-date">{{ e['quest_status'] }}</span>{% endif %}
+            {% endif %}
+            {% if e['in_game_day'] is not none %}<span class="timeline-date timeline-date-day">Day {{ e['in_game_day'] }}</span>{% endif %}
+            {% if e['in_game_date'] %}<span class="timeline-date timeline-date-ingame">{{ e['in_game_date'] }}</span>{% endif %}
           </div>
-          <h2><a href="{{ url_for('entry_detail', entry_id=s['id']) }}">{{ s['name'] }}</a></h2>
-          {% if s['summary'] %}<p class="summary">{{ s['summary'] }}</p>{% endif %}
+          <h2><a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a></h2>
+          {% if e['summary'] %}<p class="summary">{{ e['summary'] }}</p>{% endif %}
           {% if te.mentions %}
             <div class="timeline-mentions">
               {% for m in te.mentions %}
