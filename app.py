@@ -92,6 +92,28 @@ def _parse_relationship_id(value):
     return int(value) if value else None
 
 
+def _resolve_relationship_id(conn, category, select_value, new_name_value):
+    """Like _parse_relationship_id, but also handles a relationship
+    dropdown's "+ Add new..." option (see the relationship_field macro in
+    entry_form.html): if select_value is the "__add_new__" sentinel, find
+    (or, failing that, create) an entry named new_name_value in the given
+    category and return its id, so e.g. a Character's Home City can be
+    created on the spot from the Character form without a trip to a
+    separate tab -- full details still get filled in later on that
+    entry's own page. Finds by name first (rather than creating
+    unconditionally) so typing an already-existing city's name links to
+    it instead of risking a duplicate-name error."""
+    if select_value == "__add_new__":
+        new_name = (new_name_value or "").strip()
+        if not new_name:
+            return None
+        existing = models.find_entry_by_name(conn, new_name)
+        if existing:
+            return existing["id"]
+        return models.create_entry(conn, new_name, category, "", "", "", None)
+    return _parse_relationship_id(select_value)
+
+
 def _parse_pc_slot(conn, form, ignore_entry_id=None):
     """Read the hidden pc_slot field carried through the entry form. Returns
     None if unset/blank, or if the requested slot is already occupied by a
@@ -489,12 +511,12 @@ def new_entry():
         # carried forward an image before this entry existed in the database.
         existing_image_filename = request.form.get("existing_image_filename") or None
         remove_image = request.form.get("remove_image") == "1"
-        home_city_id = _parse_relationship_id(request.form.get("home_city"))
-        organization_id = _parse_relationship_id(request.form.get("organization"))
+        home_city_id = _resolve_relationship_id(conn, "City", request.form.get("home_city"), request.form.get("new_home_city"))
+        organization_id = _resolve_relationship_id(conn, "Organization", request.form.get("organization"), request.form.get("new_organization"))
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         leader_id = _parse_relationship_id(request.form.get("leader"))
-        current_city_id = _parse_relationship_id(request.form.get("current_city"))
+        current_city_id = _resolve_relationship_id(conn, "City", request.form.get("current_city"), request.form.get("new_current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
         place_id = _parse_relationship_id(request.form.get("place"))
@@ -657,12 +679,12 @@ def edit_entry(entry_id):
         content = request.form.get("content", "")
         author = request.form.get("author", "").strip()
         remove_image = request.form.get("remove_image") == "1"
-        home_city_id = _parse_relationship_id(request.form.get("home_city"))
-        organization_id = _parse_relationship_id(request.form.get("organization"))
+        home_city_id = _resolve_relationship_id(conn, "City", request.form.get("home_city"), request.form.get("new_home_city"))
+        organization_id = _resolve_relationship_id(conn, "Organization", request.form.get("organization"), request.form.get("new_organization"))
         region_id = _parse_relationship_id(request.form.get("region"))
         headquarters_city_id = _parse_relationship_id(request.form.get("headquarters_city"))
         leader_id = _parse_relationship_id(request.form.get("leader"))
-        current_city_id = _parse_relationship_id(request.form.get("current_city"))
+        current_city_id = _resolve_relationship_id(conn, "City", request.form.get("current_city"), request.form.get("new_current_city"))
         leading_organization_id = _parse_relationship_id(request.form.get("leading_organization"))
         current_holder_id = _parse_relationship_id(request.form.get("current_holder"))
         place_id = _parse_relationship_id(request.form.get("place"))

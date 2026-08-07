@@ -1,5 +1,21 @@
 {% extends "base.html" %}
 {% block title %}{% if mode == "new" %}New Entry{% else %}Edit {{ form.name }}{% endif %} — Ascension Campaign Codex{% endblock %}
+
+{% macro relationship_field(select_name, label, hint, options, current_id) %}
+  <label>
+    {{ label }} <span class="hint">{{ hint }}</span>
+    <select name="{{ select_name }}" class="relationship-select">
+      <option value="">— None —</option>
+      {% for opt in options %}
+        <option value="{{ opt['id'] }}" {% if current_id == opt['id'] %}selected{% endif %}>{{ opt['name'] }}</option>
+      {% endfor %}
+      <option value="__add_new__">+ Add new…</option>
+    </select>
+    <input type="text" name="new_{{ select_name }}" class="relationship-new-input" style="display:none"
+           placeholder="Type the new name, then save this entry to create it">
+  </label>
+{% endmacro %}
+
 {% block content %}
 <div class="page-header">
   <h1>{% if mode == "new" %}New Entry{% else %}Edit “{{ form.name }}”{% endif %}</h1>
@@ -98,24 +114,8 @@
   {% endfor %}
 
   <div class="field-group" data-show-for="Character">
-    <label>
-      Home City <span class="hint">(optional)</span>
-      <select name="home_city">
-        <option value="">— None —</option>
-        {% for city in city_options %}
-          <option value="{{ city['id'] }}" {% if form.home_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>
-      Organization <span class="hint">(optional)</span>
-      <select name="organization">
-        <option value="">— None —</option>
-        {% for org in organization_options %}
-          <option value="{{ org['id'] }}" {% if form.organization_id == org['id'] %}selected{% endif %}>{{ org['name'] }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    {{ relationship_field("home_city", "Home City", "(optional — type a new city's name to create it on the spot; fill in its full details later on its own page)", city_options, form.home_city_id) }}
+    {{ relationship_field("organization", "Organization", "(optional — type a new organization's name to create it on the spot; fill in its full details later on its own page)", organization_options, form.organization_id) }}
     <label>
       Place <span class="hint">(optional — a shop, tavern, or other place of interest this Character is attached to: owner, staff, clergy, whoever)</span>
       <select name="place">
@@ -125,15 +125,7 @@
         {% endfor %}
       </select>
     </label>
-    <label>
-      Current City <span class="hint">(where they are right now, if different from home — handy while the party travels)</span>
-      <select name="current_city">
-        <option value="">— None —</option>
-        {% for city in city_options %}
-          <option value="{{ city['id'] }}" {% if form.current_city_id == city['id'] %}selected{% endif %}>{{ city['name'] }}</option>
-        {% endfor %}
-      </select>
-    </label>
+    {{ relationship_field("current_city", "Current City", "(where they are right now, if different from home — handy while the party travels; type a new city's name to create it on the spot)", city_options, form.current_city_id) }}
   </div>
 
   <div class="field-group" data-show-for="City">
@@ -305,6 +297,27 @@
           select.value = "";
         }
       });
+    });
+  })();
+
+  (function () {
+    // "+ Add new..." on a relationship dropdown (Home City, Organization,
+    // etc.) -- unlike a plain detail-field select (option-select above),
+    // the submitted value here has to stay a real entry id or the
+    // "__add_new__" sentinel, so the typed name is just revealed/hidden in
+    // its own separate input rather than rewritten into the select itself;
+    // app.py resolves "__add_new__" + the typed name into a find-or-create
+    // lookup on submit.
+    document.querySelectorAll("select.relationship-select").forEach(function (select) {
+      var input = select.nextElementSibling;
+      if (!input || !input.classList.contains("relationship-new-input")) return;
+      function sync() {
+        var showInput = select.value === "__add_new__";
+        input.style.display = showInput ? "" : "none";
+        if (showInput) input.focus();
+      }
+      select.addEventListener("change", sync);
+      sync();
     });
   })();
 
