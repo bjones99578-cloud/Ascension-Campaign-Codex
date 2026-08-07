@@ -1153,7 +1153,6 @@ def get_map_pins(conn, map_id):
         """
         SELECT map_pin.id AS pin_id, map_pin.x AS x, map_pin.y AS y, map_pin.entry_id AS entry_id,
                map_pin.symbol AS symbol, map_pin.color AS color,
-               map_pin.discovered AS discovered,
                map_pin.target_map_id AS target_map_id,
                target_map.name AS target_map_name,
                e.name AS entry_name, e.category AS entry_category,
@@ -1175,11 +1174,11 @@ def get_map_pins(conn, map_id):
     ).fetchall()
 
 
-def add_map_pin(conn, map_id, entry_id, x, y, symbol=None, color=None, discovered=1, target_map_id=None):
+def add_map_pin(conn, map_id, entry_id, x, y, symbol=None, color=None, target_map_id=None):
     cur = conn.execute(
-        "INSERT INTO map_pin (map_id, entry_id, x, y, symbol, color, discovered, target_map_id, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (map_id, entry_id, x, y, symbol, color, discovered, target_map_id, now_iso()),
+        "INSERT INTO map_pin (map_id, entry_id, x, y, symbol, color, target_map_id, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (map_id, entry_id, x, y, symbol, color, target_map_id, now_iso()),
     )
     conn.commit()
     return cur.lastrowid
@@ -1187,18 +1186,6 @@ def add_map_pin(conn, map_id, entry_id, x, y, symbol=None, color=None, discovere
 
 def delete_map_pin(conn, pin_id):
     conn.execute("DELETE FROM map_pin WHERE id = ?", (pin_id,))
-    conn.commit()
-
-
-def set_pin_discovered(conn, pin_id, discovered):
-    """DM-only toggle: flip whether a pin has been discovered by the party
-    yet. Undiscovered pins (discovered=0) are fully hidden from the default
-    player-facing map view and only appear -- with a "hidden from players"
-    visual treatment -- when DM Mode is switched on."""
-    conn.execute(
-        "UPDATE map_pin SET discovered = ? WHERE id = ?",
-        (1 if discovered else 0, pin_id),
-    )
     conn.commit()
 
 

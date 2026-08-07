@@ -485,6 +485,7 @@ code {
   flex-wrap: wrap;
 }
 .page-header h1 { margin: 0.2rem 0; font-family: var(--font-display); color: var(--cat-light); }
+.entry-form-header-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
 
 .entry-list { list-style: none; padding: 0; margin: 0; }
 .entry-list li {
@@ -1795,53 +1796,6 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
 }
 .map-pin-delete-btn:hover { color: var(--danger-hover); }
 
-/* Fog of war: an undiscovered pin is only ever rendered at all when DM Mode
-   is on (the player-facing map excludes them outright, see map_view()), so
-   this dimmed/dashed treatment exists purely to let the DM tell at a glance,
-   among the pins they *can* see, which ones the party hasn't found yet. */
-.map-pin-undiscovered .map-pin-dot,
-.map-pin-undiscovered .map-pin-symbol,
-.map-pin-undiscovered .map-pin-flag {
-  opacity: 0.45;
-  border-style: dashed;
-  filter: grayscale(0.3);
-}
-.map-pin-hidden-tag {
-  font-family: var(--font-heading);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--accent-deep);
-  margin-top: 0.3rem;
-}
-.map-pin-discovered-form { margin-top: 0.3rem; }
-.map-pin-toggle-btn {
-  background: none;
-  border: none;
-  color: var(--accent-deep);
-  font-size: 0.78rem;
-  font-family: var(--font-heading);
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-}
-.map-pin-toggle-btn:hover { color: var(--accent-hover); }
-
-.dm-mode-form { display: contents; }
-.btn-dm-active {
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  color: #2c1e14;
-  font-weight: bold;
-  border-color: var(--accent);
-}
-.dm-mode-banner {
-  border: 1px dashed var(--accent);
-  border-radius: var(--radius);
-  padding: 0.6rem 0.9rem;
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
-}
-
 .map-pin-form {
   display: flex;
   align-items: flex-end;
@@ -2043,12 +1997,10 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
   color: var(--text-muted);
   font-size: 0.85rem;
 }
-.map-notable-item.map-notable-undiscovered { opacity: 0.6; }
-
 /* ---------- Map: wooden tabletop theme ---------- */
 /* The rest of the page (heading, map switcher, pin-placement controls and
-   forms, DM Mode banner) is left on the site's normal parchment background
-   -- those are all working controls read against the usual light-on-dark-ink
+   forms) is left on the site's normal parchment background -- those are
+   all working controls read against the usual light-on-dark-ink
    contrast the whole app assumes. Only the actual map viewport + its
    sidebar -- the part you're meant to feel like you're looking DOWN AT --
    sits on a dedicated wood-grain "table" surface (.table-surface below),
@@ -2114,7 +2066,7 @@ td.loot-ledger-line { color: var(--text-muted); font-size: 0.85rem; }
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* A subtle "tool tray" feel for the zoom/pin/DM Mode buttons, without
+/* A subtle "tool tray" feel for the zoom/pin buttons, without
    touching their contrast -- .btn is already opaque, so this just warms
    the border/shadow to feel more like wood-and-brass tools than the site's
    usual gold-leaf button. */

@@ -52,18 +52,7 @@
     {% if organization_options %}
       <button type="button" class="btn" id="orgPinModeToggle">🚩 Add Organization Pin</button>
     {% endif %}
-    <form method="post" action="{{ url_for('dm_mode_toggle') }}" class="dm-mode-form">
-      <button type="submit" class="btn {{ 'btn-dm-active' if dm_mode else '' }}" title="DM Mode reveals every pin, including ones the party hasn't discovered yet.">
-        {{ '🕯️ DM Mode: ON' if dm_mode else '🕯️ DM Mode: Off' }}
-      </button>
-    </form>
   </div>
-
-  {% if dm_mode %}
-    <p class="empty-state dm-mode-banner">
-      DM Mode is on — undiscovered pins (dimmed, dashed outline) are visible to you here but hidden from the party's normal map view. Use "Mark Discovered" / "Mark Undiscovered" on a pin's tooltip to control that.
-    </p>
-  {% endif %}
 
   {% set other_maps = maps|rejectattr('id', 'equalto', current_map['id'])|list %}
 
@@ -192,22 +181,15 @@
       <img id="mapImage" style="width: 100%;" src="{{ url_for('uploaded_file', filename=current_map['filename']) }}" alt="{{ current_map['name'] }}">
       <div class="map-pins cat-city" id="mapPins">
         {% for pin in pins %}
-          {% set undiscovered_class = "map-pin-undiscovered" if not pin.discovered else "" %}
           {% if pin.entry_category == "Character" %}
             {% set pin_color = pin.color or default_pin_color %}
-            <div class="map-pin map-pin-character {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%; --cat-color: {{ pin_color }}; --cat-light: {{ pin_color }}; --cat-glow: {{ pin_color }}66;">
+            <div class="map-pin map-pin-character" style="left: {{ pin.x }}%; top: {{ pin.y }}%; --cat-color: {{ pin_color }}; --cat-light: {{ pin_color }}; --cat-glow: {{ pin_color }}66;">
               <a class="map-pin-symbol" href="{{ url_for('entry_detail', entry_id=pin.entry_id) }}"
                  aria-label="Open {{ pin.entry_name }}">{{ pin.symbol or default_pin_symbol }}</a>
               <div class="map-pin-tooltip">
                 <strong>{{ pin.entry_name }}</strong>
                 <span>Last Known Status: {{ pin.character_status or 'Unknown' }}</span>
                 {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
-                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
-                {% if dm_mode %}
-                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
-                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
-                  </form>
-                {% endif %}
                 <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
                       onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
                   <button type="submit" class="map-pin-delete-btn">Remove pin</button>
@@ -216,7 +198,7 @@
             </div>
           {% elif pin.entry_category == "Organization" %}
             {% set pin_disposition_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "") %}
-            <div class="map-pin {{ pin_disposition_class }} {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
+            <div class="map-pin {{ pin_disposition_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
               <a class="map-pin-flag" href="{{ url_for('entry_detail', entry_id=pin.entry_id) }}"
                  aria-label="Open {{ pin.entry_name }}"></a>
               <div class="map-pin-tooltip">
@@ -224,12 +206,6 @@
                 <span>{% if pin.leader_name %}Led by {{ pin.leader_name }}{% else %}No known leader{% endif %}</span>
                 <span>{{ pin.org_type or 'Organization type unknown' }}</span>
                 {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
-                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
-                {% if dm_mode %}
-                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
-                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
-                  </form>
-                {% endif %}
                 <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
                       onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
                   <button type="submit" class="map-pin-delete-btn">Remove pin</button>
@@ -238,7 +214,7 @@
             </div>
           {% else %}
             {% set pin_disposition_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "") %}
-            <div class="map-pin {{ pin_disposition_class }} {{ undiscovered_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
+            <div class="map-pin {{ pin_disposition_class }}" style="left: {{ pin.x }}%; top: {{ pin.y }}%;">
               <a class="map-pin-dot" href="{{ url_for('city_view', city_id=pin.entry_id) }}"
                  aria-label="Open {{ pin.entry_name }} in City View"></a>
               <div class="map-pin-tooltip">
@@ -250,12 +226,6 @@
                 </span>
                 <span>{{ pin.settlement_size or 'Settlement size unknown' }}</span>
                 {% if pin.target_map_id %}<a class="map-pin-submap-link" href="{{ url_for('map_view', map_id=pin.target_map_id) }}">View sub-map: {{ pin.target_map_name }} →</a>{% endif %}
-                {% if dm_mode %}<span class="map-pin-hidden-tag">{{ 'Hidden from players' if not pin.discovered else 'Visible to players' }}</span>{% endif %}
-                {% if dm_mode %}
-                  <form method="post" action="{{ url_for('map_pin_toggle_discovered', pin_id=pin.pin_id) }}" class="map-pin-discovered-form">
-                    <button type="submit" class="map-pin-toggle-btn">{{ 'Mark Discovered' if not pin.discovered else 'Mark Undiscovered' }}</button>
-                  </form>
-                {% endif %}
                 <form method="post" action="{{ url_for('map_pin_delete', pin_id=pin.pin_id) }}" class="map-pin-delete-form"
                       onsubmit="return confirm('Remove this pin from the map? The {{ pin.entry_name }} entry itself is kept.');">
                   <button type="submit" class="map-pin-delete-btn">Remove pin</button>
@@ -299,7 +269,7 @@
             {% else %}
               {% set item_class = "pin-friendly" if pin.disposition == "Friendly" else ("pin-hostile" if pin.disposition == "Hostile" else "cat-city") %}
             {% endif %}
-            <li class="map-notable-item {{ item_class }} {{ 'map-notable-undiscovered' if not pin.discovered else '' }}"
+            <li class="map-notable-item {{ item_class }}"
                 {% if pin.entry_category == "Character" %}style="--cat-color: {{ pin_color }}; --cat-light: {{ pin_color }};"{% endif %}>
               {% if pin.entry_category == "City" %}
                 <a href="{{ url_for('city_view', city_id=pin.entry_id) }}">{{ pin.entry_name }}</a>
@@ -317,7 +287,6 @@
                   {% else %}{{ pin.settlement_size or 'Settlement' }}{% endif %}
                 {% endif %}
               </span>
-              {% if dm_mode and not pin.discovered %}<span class="map-pin-hidden-tag">Hidden from players</span>{% endif %}
             </li>
           {% endfor %}
         </ul>

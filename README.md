@@ -140,11 +140,9 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
   map viewport sits inside a gold corner-bracket frame with a small compass
   rose in the corner, and a two-panel sidebar sits alongside it — a
   "Legend" explaining the pin colors/shapes and a "Notable Locations" list
-  of every pin on the current map (respecting DM Mode's fog-of-war, so
-  undiscovered pins are dimmed and tagged for the DM instead of leaking to
-  players). City View stays in its simpler, uncluttered style, since it's
-  a working view you glance at mid-session rather than a page you sit and
-  read.
+  of every pin on the current map. City View stays in its simpler,
+  uncluttered style, since it's a working view you glance at mid-session
+  rather than a page you sit and read.
 - **Party Roster**: the "Party Roster" link in the nav is a fixed 5-slot
   page for your actual player characters. Mark any Character entry as a
   **Party Member** (a field right on the Character form) and fill in their
@@ -354,21 +352,6 @@ find your computer's local IP (e.g. `192.168.1.23`) and share
     so a hostile cult's hideout reads red on the map without you picking a
     color by hand. Hover for their Leader and Organization Type, click to
     jump to their entry, "Remove pin" to unpin.
-  - **DM Mode / fog of war**: any pin (City, Character, or Organization) can
-    be kept secret from the party until they've actually found it. The
-    "🕯️ DM Mode" button on the map toggles a DM-only view of the map for
-    your own browser/session — flip it on and every pin appears, including
-    ones marked undiscovered (shown dimmed with a dashed outline and a
-    "Hidden from players" tag on hover, plus a "Mark Discovered" /
-    "Mark Undiscovered" link). With DM Mode off — the default view everyone
-    else sees — undiscovered pins don't render on the map at all, so a
-    secret lair doesn't tip its own existence just by showing up as an
-    unlabeled dot. New pins default to discovered/visible, matching how the
-    map already worked before this feature existed; mark one undiscovered
-    only when you're deliberately hiding something the party hasn't found
-    yet. Since there's no login system, DM Mode isn't a security boundary —
-    it's just a convenience switch, remembered per browser, for whoever's
-    running the table.
 - **Session Log**: a dedicated category for session recaps, separate from
   the world's own entries. Give one a **Session #**, a **Session Date** (the
   real-world date you played), and an **In-Game Date** (free text, since most

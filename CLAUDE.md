@@ -40,16 +40,15 @@ A Flask + SQLite D&D campaign wiki, built from scratch for one home game ("the A
 /projects[...]                     crafting/building progress-tracker widget
                                     (shared between Bastion facilities and PCs)
 /timeline                          session log timeline view
-/map, /maps/[...]                  world map(s), upload, pins, DM Mode
-/dm-mode/toggle                    toggles DM-only map reveal controls
-/map/pins[...]                     pin placement/discovery toggling
+/map, /maps/[...]                  world map(s), upload, pins
+/map/pins[...]                     pin placement
 /check-for-updates                 the self-update button (see below)
 ```
 
 ## Feature inventory (everything that currently exists)
 
 1. **Core wiki** — 7 categories, full CRUD, markdown content with `[[Entry Name]]` auto-linking (including retroactive resolution when a new entry's name matches existing dangling links), search, a generic `category.html` listing template shared by 6 of the 7 categories.
-2. **World Map** — multiple uploadable maps, click-to-place pins linked to entries, "discovered" toggle per pin, DM Mode (gates pin visibility/placement), now has its own **"wooden tabletop" visual theme** (see Recent Work).
+2. **World Map** — multiple uploadable maps, click-to-place pins linked to entries, now has its own **"wooden tabletop" visual theme** (see Recent Work). No DM-only/hidden-pin concept — this codex is player-facing, every pin is always visible to everyone.
 3. **Party Roster** — a fixed 5-slot roster (assign/unassign existing PCs or create new ones straight into a slot), per-class color theming (`CLASS_THEME_SLUGS` → `.class-<slug>` CSS), now has its own **"sports promotion" trading-card visual theme** (see Recent Work).
 4. **Loot Tracker** — party inventory/gold ledger, item history (sold/used/lost items shown struck-through rather than deleted). **Not yet themed** ("bank" theme planned).
 5. **Bastion** — BG3/2024-rules-style stronghold tracker: overall Bastion settings + image, individual Special Facilities each with their own image, and a **Projects** system (see below). **Not yet themed** ("cloud ship" theme planned).
@@ -58,7 +57,7 @@ A Flask + SQLite D&D campaign wiki, built from scratch for one home game ("the A
 8. **Reference page** — static-ish Species/Class quick-lookup cards, class cards share the same `.class-<slug>` theming as Party Roster.
 9. **Timeline** — chronological session log view.
 10. **D&D Beyond import** — pulls a character sheet from a D&D Beyond URL into a new Character entry.
-11. **Self-update button** — footer "Check for Updates" button; fetches + fast-forward-only pulls from GitHub, then (if 3 PythonAnywhere env vars are set) calls PythonAnywhere's reload API to restart the live site automatically. Fully open, no DM-mode gating. **Just had a real production bug fixed** — see below.
+11. **Self-update button** — footer "Check for Updates" button; fetches + fast-forward-only pulls from GitHub, then (if 3 PythonAnywhere env vars are set) calls PythonAnywhere's reload API to restart the live site automatically. Fully open. **Just had a real production bug fixed** — see below.
 12. **Backups** — `backup.py` does a consistent SQLite-backup-API copy (safe under WAL mode, unlike a raw file copy of a running DB).
 
 ## Established conventions (read before writing more CSS/templates)

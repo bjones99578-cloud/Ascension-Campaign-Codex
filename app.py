@@ -17,8 +17,8 @@ app = Flask(__name__)
 if not os.environ.get("SECRET_KEY"):
     # Not fatal -- a small trusted-party app shouldn't refuse to start over
     # this -- but silent-and-insecure is worse than silent-and-loud. Session
-    # cookies (currently just the DM Mode toggle and the "your name"
-    # field) are signed with this key, so a known default value in the
+    # cookies (currently just the "your name" field) are signed with this
+    # key, so a known default value in the
     # public GitHub repo means anyone could forge one. This prints to
     # whatever the host's own startup/error log is (PythonAnywhere's Error
     # log, Render's log stream, etc.), so it's visible without needing to
@@ -1378,18 +1378,7 @@ def map_view():
     if current_map is None and maps:
         current_map = maps[0]
 
-    dm_mode = session.get("dm_mode", False)
-    if current_map:
-        all_pins = models.get_map_pins(conn, current_map["id"])
-        # Fog of war: with DM Mode off (the default "player view"), pins the
-        # DM hasn't marked as Discovered yet are excluded entirely -- players
-        # should never learn a secret location exists just by noticing an
-        # unlabeled dot on the map. DM Mode shows every pin, with
-        # undiscovered ones flagged visually so the DM can tell at a glance
-        # what's still hidden.
-        pins = all_pins if dm_mode else [p for p in all_pins if p["discovered"]]
-    else:
-        pins = []
+    pins = models.get_map_pins(conn, current_map["id"]) if current_map else []
 
     city_options = models.list_entries(conn, category="City")
     character_options = models.list_entries(conn, category="Character")
@@ -1399,24 +1388,12 @@ def map_view():
         maps=maps,
         current_map=current_map,
         pins=pins,
-        dm_mode=dm_mode,
         city_options=city_options,
         character_options=character_options,
         organization_options=organization_options,
         default_pin_symbol=models.DEFAULT_CHARACTER_PIN_SYMBOL,
         default_pin_color=models.DEFAULT_CHARACTER_PIN_COLOR,
     )
-
-
-@app.route("/dm-mode/toggle", methods=["POST"])
-def dm_mode_toggle():
-    """Flip DM Mode for this browser session. There's no login system in
-    this app, so DM Mode isn't a security boundary -- it's a convenience
-    switch for whoever's running the table to preview the fully-revealed
-    map. Session-scoped (not a DB setting) so each browser/tab remembers
-    its own choice rather than flipping the view for everyone at the table."""
-    session["dm_mode"] = not session.get("dm_mode", False)
-    return redirect(request.referrer or url_for("map_view"))
 
 
 @app.route("/maps/new", methods=["POST"])
@@ -1521,17 +1498,6 @@ def map_pin_delete(pin_id):
     map_id = _pin_map_id(conn, pin_id)
     models.delete_map_pin(conn, pin_id)
     return redirect(url_for("map_view", map_id=map_id))
-
-
-@app.route("/map/pins/<int:pin_id>/toggle-discovered", methods=["POST"])
-def map_pin_toggle_discovered(pin_id):
-    """DM-only control (only rendered in the map template while DM Mode is
-    on) for flipping a pin between hidden-from-players and revealed."""
-    conn = get_conn()
-    pin = conn.execute("SELECT discovered, map_id FROM map_pin WHERE id = ?", (pin_id,)).fetchone()
-    if pin is not None:
-        models.set_pin_discovered(conn, pin_id, not pin["discovered"])
-    return redirect(url_for("map_view", map_id=pin["map_id"] if pin else None))
 
 
 @app.route("/check-for-updates", methods=["POST"])
