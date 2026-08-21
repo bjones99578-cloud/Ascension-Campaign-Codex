@@ -589,6 +589,21 @@ def init_db():
             updated_at TEXT NOT NULL
         );
 
+        -- One party member's personal write-up of a given session, from
+        -- their own character's perspective (see compile_session_log).
+        -- UNIQUE(session_id, character_id) means resubmitting is always an
+        -- edit to the same note, never a duplicate -- a character only
+        -- ever has one note per session.
+        CREATE TABLE IF NOT EXISTS session_note (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
+            character_id INTEGER NOT NULL REFERENCES entry (id) ON DELETE CASCADE,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (session_id, character_id)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_link_source ON link (source_id);
         CREATE INDEX IF NOT EXISTS idx_link_target ON link (target_id);
         CREATE INDEX IF NOT EXISTS idx_entry_category ON entry (category);
@@ -596,6 +611,7 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_map_pin_entry ON map_pin (entry_id);
         CREATE INDEX IF NOT EXISTS idx_project_owner ON project (owner_type, owner_id);
         CREATE INDEX IF NOT EXISTS idx_entry_image_entry ON entry_image (entry_id);
+        CREATE INDEX IF NOT EXISTS idx_session_note_session ON session_note (session_id);
         """
     )
     # Lightweight migrations for databases created before these columns existed.
@@ -1235,6 +1251,145 @@ def get_timeline_entries(conn):
 
     rows.sort(key=sort_key)
     return rows
+
+
+def get_previous_session_log(conn, session_id):
+    """The SessionLog entry immediately before this one, in the order they
+    were actually logged (created_at), not by session_date/in_game_day --
+    those are optional freeform fields, so real insertion order is the
+    reliable signal for "what came before this session was logged." None
+    if this is the first SessionLog ever created."""
+    session = get_entry(conn, session_id)
+    if session is None:
+        return None
+    return conn.execute(
+        "SELECT * FROM entry WHERE category = 'SessionLog' AND created_at < ? "
+        "ORDER BY created_at DESC LIMIT 1",
+        (session["created_at"],),
+    ).fetchone()
+
+
+def get_newly_introduced_entries(conn, session_id):
+    """Every non-SessionLog entry created since the previous session log
+    (or since the beginning, if this is the first one) up to *now* --
+    deliberately not capped at this session's own created_at, since new
+    Characters/Places/Quests are usually created *during* play, which can
+    be after the SessionLog entry itself was first created as an empty
+    shell. Grouped by category, in CATEGORIES order, for display in the
+    compiled log's "New This Session" section."""
+    previous = get_previous_session_log(conn, session_id)
+    cutoff = previous["created_at"] if previous else "0000-00-00T00:00:00"
+    rows = conn.execute(
+        "SELECT * FROM entry WHERE category != 'SessionLog' AND created_at > ? "
+        "ORDER BY category, name COLLATE NOCASE ASC",
+        (cutoff,),
+    ).fetchall()
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row["category"], []).append(row)
+    return {cat: grouped[cat] for cat in CATEGORIES if cat in grouped}
+
+
+def get_session_notes(conn, session_id):
+    """Every character's note for a session, joined to the character's
+    name, alphabetical -- used by both the SessionLog detail page's
+    submission checklist and compile_session_log."""
+    return conn.execute(
+        """
+        SELECT sn.*, e.name AS character_name
+        FROM session_note sn
+        JOIN entry e ON e.id = sn.character_id
+        WHERE sn.session_id = ?
+        ORDER BY e.name COLLATE NOCASE ASC
+        """,
+        (session_id,),
+    ).fetchall()
+
+
+def get_session_note(conn, session_id, character_id):
+    """A single character's note for a session, or None -- used to prefill
+    the note form when re-opening it to edit an existing submission."""
+    return conn.execute(
+        "SELECT * FROM session_note WHERE session_id = ? AND character_id = ?",
+        (session_id, character_id),
+    ).fetchone()
+
+
+def upsert_session_note(conn, session_id, character_id, content):
+    """A character only ever has one note per session (see the session_note
+    table's UNIQUE constraint) -- resubmitting always edits the existing
+    row rather than creating a duplicate. Blank content is treated as "no
+    note" and silently ignored rather than saving an empty row."""
+    content = (content or "").strip()
+    if not content:
+        return
+    ts = now_iso()
+    conn.execute(
+        """
+        INSERT INTO session_note (session_id, character_id, content, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (session_id, character_id)
+        DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at
+        """,
+        (session_id, character_id, content, ts, ts),
+    )
+    conn.commit()
+
+
+def compile_session_log(conn, session_id):
+    """Merge every submitted session_note for this session into the
+    SessionLog entry's own content: a leading "New This Session" section
+    auto-detected from get_newly_introduced_entries (only if non-empty),
+    then one "### Character Name" section per submitted note. Reuses
+    update_entry -- the same function the normal entry-edit form calls --
+    so [[Name]] auto-linking and markdown rendering need no special-casing
+    anywhere else in the app; a DM can also hand-edit the result afterward
+    like any other entry (a later re-compile will overwrite that edit,
+    same as clicking Compile again always would). Returns False and does
+    nothing if no notes have been submitted yet, so a stray click can't
+    blank out an entry that already has content."""
+    session = get_entry(conn, session_id)
+    notes = get_session_notes(conn, session_id)
+    if session is None or not notes:
+        return False
+
+    parts = []
+    new_entries = get_newly_introduced_entries(conn, session_id)
+    if new_entries:
+        parts.append("## New This Session")
+        for category, entries in new_entries.items():
+            label = CATEGORY_PLURALS.get(category, category)
+            links = ", ".join(f"[[{e['name']}]]" for e in entries)
+            parts.append(f"**{label}:** {links}")
+        parts.append("")
+
+    parts.append("## Session Notes")
+    for note in notes:
+        parts.append(f"### {note['character_name']}\n\n{note['content']}")
+
+    content = "\n\n".join(parts).strip()
+    update_entry(
+        conn,
+        session_id,
+        name=session["name"],
+        category=session["category"],
+        summary=session["summary"],
+        content=content,
+        author=session["author"],
+        home_city_id=session["home_city_id"],
+        organization_id=session["organization_id"],
+        region_id=session["region_id"],
+        headquarters_city_id=session["headquarters_city_id"],
+        leader_id=session["leader_id"],
+        current_city_id=session["current_city_id"],
+        leading_organization_id=session["leading_organization_id"],
+        current_holder_id=session["current_holder_id"],
+        place_id=session["place_id"],
+        city_id=session["city_id"],
+        pc_slot=session["pc_slot"],
+        details={col: session[col] for col in DETAIL_COLUMNS},
+    )
+    return True
 
 
 def get_shared_loot_items(conn):

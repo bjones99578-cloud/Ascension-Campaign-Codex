@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Session Note — {{ session_entry['name'] }} — Ascension Campaign Codex{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Your Notes: {{ session_entry['name'] }}</h1>
+  <div class="entry-form-header-actions">
+    <button type="submit" form="session-note-form" class="btn btn-primary">Save Note</button>
+  </div>
+</div>
+
+<p class="summary">Write this session up from your character's perspective — mention any people, places, or things by name and they'll link automatically, same as any other entry. Submitting again just updates your existing note.</p>
+
+<form id="session-note-form" class="entry-form" method="post" action="{{ url_for('session_note', session_id=session_entry['id']) }}">
+  <label>
+    Character
+    <select name="character_id" id="character-select" required>
+      <option value="">— Choose your character —</option>
+      {% for pc in player_characters %}
+        <option value="{{ pc['id'] }}" {% if character_id == pc['id'] %}selected{% endif %}>{{ pc['name'] }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label>
+    Your Notes
+    <textarea name="content" rows="14" placeholder="What did your character do, see, and decide this session?" autofocus>{{ existing_note['content'] if existing_note else '' }}</textarea>
+  </label>
+</form>
+
+<p class="entry-meta"><a href="{{ url_for('entry_detail', entry_id=session_entry['id']) }}">&larr; Back to {{ session_entry['name'] }}</a></p>
+
+<script>
+  (function () {
+    // Reload with ?character_id=<selection> so switching characters in the
+    // dropdown re-fetches (and prefills) *their* existing note instead of
+    // silently carrying over whatever was already typed for someone else.
+    var select = document.getElementById("character-select");
+    var baseUrl = "{{ url_for('session_note', session_id=session_entry['id']) }}";
+    select.addEventListener("change", function () {
+      if (select.value) {
+        window.location.href = baseUrl + "?character_id=" + select.value;
+      }
+    });
+  })();
+</script>
+{% endblock %}

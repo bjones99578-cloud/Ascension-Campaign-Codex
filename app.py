@@ -460,6 +460,27 @@ def entry_detail(entry_id):
     if entry["category"] == "Character" and entry["is_player_character"] == "Yes":
         projects = models.get_projects(conn, "character", entry_id)
 
+    # A SessionLog's own player-submitted notes (one per Character, see
+    # /session/<id>/note) plus the roster to build the "who's submitted"
+    # checklist and the auto-detected "new this session" entries -- all
+    # feeding the Compile Session action (see /session/<id>/compile). Each
+    # note's content is pre-rendered here (not in the template) so its own
+    # [[wiki links]] render the same as everywhere else in the app.
+    session_notes = None
+    player_characters = None
+    new_entries = None
+    if entry["category"] == "SessionLog":
+        session_notes = [
+            {
+                "character_id": n["character_id"],
+                "character_name": n["character_name"],
+                "rendered": render_wiki_content(n["content"], conn, exclude_name=entry["name"]),
+            }
+            for n in models.get_session_notes(conn, entry_id)
+        ]
+        player_characters = models.get_player_characters(conn)
+        new_entries = models.get_newly_introduced_entries(conn, entry_id)
+
     gallery_images = models.get_gallery_images(conn, entry_id)
 
     # Every entry directly connected to this one -- via its own outgoing
@@ -493,6 +514,9 @@ def entry_detail(entry_id):
         related=related,
         related_entities=related_entities,
         projects=projects,
+        session_notes=session_notes,
+        player_characters=player_characters,
+        new_entries=new_entries,
         gallery_images=gallery_images,
         web=web,
     )
@@ -1382,6 +1406,52 @@ def timeline():
         for e in entries
     ]
     return render_template("timeline.html", timeline_entries=timeline_entries)
+
+
+@app.route("/session/<int:session_id>/note", methods=["GET", "POST"])
+def session_note(session_id):
+    """A single party member's write-up of one session, from their own
+    character's perspective -- picked from a dropdown rather than tied to a
+    login (this app has none, by design). Submitting again for the same
+    character just edits their existing note (see models.upsert_session_note)
+    so re-opening this form after Compile Session still lets you fix a typo
+    without starting over."""
+    conn = get_conn()
+    session_entry = models.get_entry(conn, session_id)
+    if session_entry is None or session_entry["category"] != "SessionLog":
+        return render_template("not_found.html"), 404
+    player_characters = models.get_player_characters(conn)
+
+    if request.method == "POST":
+        character_id = request.form.get("character_id", type=int)
+        character = models.get_entry(conn, character_id) if character_id else None
+        if character and character["category"] == "Character" and character["is_player_character"] == "Yes":
+            models.upsert_session_note(conn, session_id, character_id, request.form.get("content", ""))
+        return redirect(url_for("entry_detail", entry_id=session_id))
+
+    character_id = request.args.get("character_id", type=int)
+    existing_note = models.get_session_note(conn, session_id, character_id) if character_id else None
+    return render_template(
+        "session_note_form.html",
+        session_entry=session_entry,
+        player_characters=player_characters,
+        character_id=character_id,
+        existing_note=existing_note,
+    )
+
+
+@app.route("/session/<int:session_id>/compile", methods=["POST"])
+def session_compile(session_id):
+    """Merges every submitted character note for this session into the
+    entry's own content (see models.compile_session_log) -- a no-op if
+    nobody has submitted a note yet, so a stray click can't blank out an
+    entry that already has content."""
+    conn = get_conn()
+    session_entry = models.get_entry(conn, session_id)
+    if session_entry is None or session_entry["category"] != "SessionLog":
+        return render_template("not_found.html"), 404
+    models.compile_session_log(conn, session_id)
+    return redirect(url_for("entry_detail", entry_id=session_id))
 
 
 @app.route("/map")

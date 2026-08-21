@@ -319,6 +319,56 @@
     </div>
   {% endif %}
 
+  {% if session_notes is not none %}
+    <div class="divider"><span class="divider-mark"></span></div>
+    <div class="related-block session-log-block">
+      <div class="section-heading"><span class="section-heading-mark"></span>Session Notes<span class="section-heading-mark"></span></div>
+      <p class="summary">Each party member writes this session up from their own character's perspective below, then Compile Session merges every submitted note into the write-up above — new Characters, Places, Quests, etc. created since the last session are called out automatically.</p>
+
+      {% set submitted_ids = session_notes | map(attribute='character_id') | list %}
+      {% if player_characters %}
+        <ul class="entry-list compact session-note-checklist">
+          {% for pc in player_characters %}
+            <li class="{{ 'session-note-submitted' if pc['id'] in submitted_ids else 'session-note-pending' }}">
+              <span>{{ '✅' if pc['id'] in submitted_ids else '—' }} {{ pc['name'] }}</span>
+              <a class="btn btn-sm" href="{{ url_for('session_note', session_id=entry['id'], character_id=pc['id']) }}">{{ 'Edit Note' if pc['id'] in submitted_ids else 'Add Note' }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty-state">No party members on the roster yet — assign one on the Party Roster page first.</p>
+      {% endif %}
+
+      {% if new_entries %}
+        <div class="session-new-callout cat-{{ entry['category'].lower() }}">
+          <strong>New this session:</strong>
+          {% for category, entries in new_entries.items() %}
+            <span class="session-new-group"><span class="relation-label">{{ category_labels.get(category, category) }}:</span>
+              {% for e in entries %}<a href="{{ url_for('entry_detail', entry_id=e['id']) }}">{{ e['name'] }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('session_compile', session_id=entry['id']) }}" class="session-compile-form"
+            onsubmit="return confirm('Compile Session? This replaces the write-up above with everyone\'s submitted notes.');">
+        <button type="submit" class="btn btn-primary" {{ 'disabled' if not session_notes else '' }}>Compile Session</button>
+        {% if not session_notes %}<span class="empty-state">Submit at least one note before compiling.</span>{% endif %}
+      </form>
+
+      {% if session_notes %}
+        <div class="session-note-list">
+          {% for note in session_notes %}
+            <div class="session-note-card">
+              <h3>{{ note['character_name'] }}</h3>
+              <div class="session-note-content">{{ note['rendered'] | safe }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
   {% if web %}
     <div class="divider"><span class="divider-mark"></span></div>
     <div class="related-block relationship-web-block">
